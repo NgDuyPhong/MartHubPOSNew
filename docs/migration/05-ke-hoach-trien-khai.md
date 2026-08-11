@@ -1,0 +1,245 @@
+# Kế hoạch triển khai MartHubPOSNew
+
+## 1. Cách tổ chức
+
+Triển khai theo vertical slice có thể demo và nghiệm thu, không chia thuần backend/frontend. Mỗi milestone phải có migration, model/action, authorization, UI state, dữ liệu demo và smoke test/UAT cần thiết. Unit test được hoãn đến sau khi hoàn tất toàn bộ chức năng và do chủ dự án thực hiện.
+
+Thời lượng chỉ nên ước lượng sau khi biết số người, dữ liệu production, yêu cầu offline và thiết bị in. Thứ tự dưới đây là dependency bắt buộc, không phải lịch theo tuần.
+
+## 2. Milestone 0 — chốt baseline và quyết định nghiệp vụ
+
+### Công việc
+
+- lưu ảnh/video baseline các màn POS, hóa đơn, import, danh mục và đơn vị trên desktop/mobile;
+- đo số click/thời gian cho các kịch bản UAT chính;
+- nhận backup MySQL legacy, dump metadata và profile trên bản sao ở chế độ read-only;
+- chốt các chi tiết còn mở: giới hạn giá/discount, thời hạn đổi trả, nội dung mẫu in 58 mm, PIN đổi actor và ngưỡng duyệt chênh lệch két;
+- chốt browser/độ phân giải, scanner, printer và môi trường quầy;
+- chuyển ma trận chức năng thành backlog có ID giữ nguyên như tài liệu này.
+
+### Exit criteria
+
+- mọi câu hỏi ảnh hưởng schema hoặc checkout có owner và quyết định;
+- có data profile, risk register và UAT baseline;
+- phạm vi P0 được business sign-off.
+
+## 3. Milestone 1 — nền tảng domain và quyền
+
+### Công việc
+
+- chuẩn hóa app identity/branding/navigation, bỏ nội dung starter không liên quan;
+- dùng authentication hiện có, quyết định có/không public registration;
+- capability-based authorization và seed nhóm quyền ban đầu;
+- organization/branch mặc định, actor/request context;
+- money value object/convention, audit log và idempotency foundation;
+- cấu hình SQLite local/MySQL production, chạy migrations trên cả hai và dùng MySQL staging làm chuẩn;
+- storage persistent cho product image, metadata/checksum và quy trình backup file;
+- CI tối thiểu: frontend type/lint/build, PHP syntax/style và kiểm tra database migration; chưa yêu cầu unit test ở milestone này.
+
+### Exit criteria
+
+- user đăng nhập và thấy đúng menu theo capability;
+- không có mutation nghiệp vụ public;
+- pipeline build/migration chạy ổn định trên database mục tiêu.
+
+## 4. Milestone 2 — catalog, pricing, category, unit và import
+
+### Vertical slices
+
+1. category tree CRUD/deactivate;
+2. unit master CRUD/deactivate, không đặt conversion toàn cục;
+3. product/variant management và quick add/edit contract;
+4. tab `Đơn vị & Barcode` theo sản phẩm: base unit, sell/purchase units, conversion, barcode, default và active state;
+5. barcode resolve trực tiếp product unit khi scan;
+6. một price book model thống nhất và giá riêng theo product unit cho lon/lốc/thùng;
+7. inventory balance/movement chỉ dùng base quantity;
+8. nhập kho nhanh bằng form và Excel, export template versioned, preview conversion và last purchase cost;
+9. current cost theo lần nhập gần nhất và cost snapshot contract;
+10. optional inventory lot/expiry, FEFO và cảnh báo scheduled trước 7 ngày;
+11. điều chỉnh cơ bản và màn đối soát tồn âm;
+12. product import wizard có preset legacy 18 cột, preview, batch và error report;
+13. catalog sync endpoint/version cho POS cache.
+
+### Exit criteria
+
+- CAT-01 đến CAT-13 đạt acceptance criteria;
+- INV-01 đến INV-05 đạt acceptance criteria;
+- product import legacy và stock-in Excel template cho kết quả lặp lại được;
+- barcode/unit/pricing invariant được kiểm tra qua validation, smoke test và UAT; unit test bổ sung ở giai đoạn hardening;
+- UI danh mục/đơn vị đã được người dùng cũ UAT.
+
+## 5. Milestone 3 — POS online parity
+
+### Vertical slices
+
+1. POS shell và bố cục catalog 2/5 + cart 3/5;
+2. tìm tiếng Việt/barcode, category filter, scanner và virtual list nếu benchmark cần;
+3. customer segment + price/unit selector;
+4. cart row operations, multi-select, discount policy và shortcuts;
+5. owner PIN approval online cho price/discount override; offline khóa override và dùng giá/policy cache;
+6. checkout cash/QR, manual QR confirmation, split payment và customer debt với server-authoritative totals;
+7. negative-stock warning và reconciliation flag, không chặn sale;
+8. payment, debt entry, immutable sale snapshot và inventory movement trong transaction;
+9. responsive tablet/mobile và accessibility.
+
+### Exit criteria
+
+- POS-01 đến POS-17 và POS-19 đến POS-20, trừ POS-18 được hoàn thành ở milestone kế tiếp, đạt acceptance criteria;
+- luồng bán phổ biến không tăng đáng kể số bước/thời gian so với baseline;
+- kiểm tra tích hợp các case concurrent stock và tampered price; unit test chi tiết bổ sung sau;
+- không thể tạo sale trùng bằng cùng idempotency key.
+
+## 6. Milestone 4 — ca/két, công nợ, hóa đơn và in
+
+### Công việc
+
+- shared shift trên một register/device, nhiều participant/actor và đổi nhanh bằng PIN;
+- opening float, cash in/out, cash debt collection, blind count, variance và close;
+- customer CRUD, debt ledger, partial payment và thu nợ bằng cash/QR;
+- summary/filter/table/detail dựa trên snapshot;
+- reversal/refund toàn phần kèm reason, capability và audit;
+- partial line return/exchange, refund cash/QR/debt và return stock movement;
+- immutable sale/item snapshot và historical reprint;
+- receipt template 58 mm, print/reprint theo thiết bị thật;
+- metric doanh thu/lợi nhuận/status có định nghĩa thống nhất;
+- customer selector cơ bản nếu cần cho receipt và lịch sử.
+
+### Exit criteria
+
+- SAL-01 đến SAL-08 đạt yêu cầu;
+- POS-18, CRM-01 đến CRM-03 và SHF-01 đến SHF-04 đạt yêu cầu;
+- double cancel/refund không tạo double stock/payment movement;
+- mẫu in được ký duyệt;
+- partial return/exchange không trả vượt base quantity đã bán và xử lý đúng payment/debt;
+- sale lịch sử vẫn đọc đúng khi product đổi hoặc inactive;
+- expected cash không cộng QR hoặc phần debt chưa thu; ca đóng không sửa trực tiếp;
+- khách không có phone vẫn được quản lý bằng customer ID/name và lịch sử ledger.
+
+## 7. Milestone 5 — offline parity và khả năng phục hồi
+
+### Công việc
+
+- IndexedDB catalog cache theo version/cursor/tombstone;
+- persistent storage và chức năng export/recovery local queue;
+- offline sale envelope và durable queue;
+- tự retry có backoff và sync thủ công;
+- badge/danh sách pending/syncing/failed/conflict;
+- conflict handling cho stale catalog, price hoặc stock;
+- telemetry cho queue backlog/sync failure;
+- kiểm tra smoke/integration tình huống timeout sau khi server đã commit.
+
+### Exit criteria
+
+- POS-02, POS-14 và SAL-05 đạt parity;
+- mất mạng/reload browser không mất hóa đơn pending;
+- cùng local ID chỉ tạo một server sale;
+- người dùng xử lý được rejected/conflict, không bị xóa queue im lặng;
+- không khóa bán theo tuổi queue; open shift/sale/payment/close shift sync đúng dependency;
+- offline checkout dùng giá cache nhưng không cho sửa giá/discount hoặc xác thực owner PIN;
+- offline policy được UAT với một máy POS.
+
+## 8. Milestone 6 — vận hành P1
+
+### Công việc ưu tiên
+
+- trang sản phẩm/kho và inventory movement;
+- báo cáo ngày/doanh thu cơ bản;
+- báo cáo ca/két, công nợ, tồn âm và hàng cận/hết hạn;
+- settings theo scope;
+- monitoring, backup và restore drill.
+
+Các hạng mục P1 có thể bắt đầu sớm nếu không làm phân tán nhóm đang hoàn thiện transaction sale/offline.
+
+## 9. Milestone 7 — migration rehearsal và UAT
+
+### Rehearsal
+
+- ETL full từ backup MySQL legacy vào MySQL staging sạch;
+- copy/reconcile product image vào storage persistent;
+- xuất counts, exception và reconciliation report;
+- sửa rule trong code/config rồi chạy lại từ đầu, không vá tay DB;
+- performance test với volume tương đương production;
+- UAT tất cả kịch bản trong tài liệu giao diện.
+- diễn tập đầy đủ cửa sổ 12 giờ và xác lập mốc go/no-go trước giờ thứ 8.
+
+### Exit criteria
+
+- toàn bộ P0 đạt Definition of Done về chức năng;
+- không có lỗi mở có thể gây sai tiền, sai tồn, mất/trùng sale hoặc bỏ queue;
+- reconciliation và opening stock được ký;
+- backup/restore, monitoring và support rota sẵn sàng;
+- cutover/cutback runbook đã diễn tập;
+- người dùng đã được hướng dẫn các điểm thay đổi UI.
+
+## 10. Milestone 8 — unit test và hardening sau khi hoàn tất chức năng
+
+Milestone này do chủ dự án thực hiện sau khi các milestone chức năng hoàn tất. Backlog chi tiết nằm trong tài liệu kiến trúc và dữ liệu.
+
+### Phạm vi
+
+- unit test backend cho money, pricing, conversion, state transition và domain services;
+- test frontend cho cart, phím tắt, pricing display và offline state;
+- feature/integration test cho authorization, sale/payment/stock/refund/idempotency/import;
+- concurrency và migration fixture tests;
+- browser E2E cho các hành trình vận hành chính;
+- sửa regression và hoàn thiện hardening phát hiện từ test.
+
+### Cutover gate
+
+- bộ test quan trọng đã chạy và các lỗi ảnh hưởng tiền, tồn, sale hoặc offline đã đóng;
+- full build/type-check/lint/migration check pass;
+- UAT và reconciliation vẫn pass sau hardening.
+
+## 11. Cutover
+
+1. đóng ca cuối, kiểm tra offline pending bằng 0;
+2. đóng mutation legacy hoặc chuyển read-only;
+3. backup MySQL và folder ảnh cuối;
+4. chạy final full ETL và copy ảnh;
+5. automated reconciliation + sign-off;
+6. quyết định go/no-go chậm nhất ở giờ thứ 8 của cửa sổ 12 giờ;
+7. chuyển client/URL và mở ca đầu tiên trên hệ thống mới;
+8. smoke test cash, QR, debt, tồn âm, in và sync trên thiết bị quầy;
+9. theo dõi sale/payment/stock/shift/offline queue sát trong giai đoạn ổn định;
+10. giữ legacy read-only theo retention policy.
+
+## 12. Definition of Done cho mỗi backlog item
+
+- acceptance criteria nghiệp vụ rõ và đã pass;
+- authorization/validation chạy server-side;
+- transaction, idempotency và audit được áp dụng nếu liên quan;
+- desktop, tablet/mobile state liên quan đã kiểm tra;
+- loading/empty/error/offline/permission state đã xử lý;
+- build/type-check/lint/migration check và smoke test/UAT phù hợp với phạm vi thay đổi;
+- unit test được ghi vào backlog hardening, không chặn việc hoàn tất từng chức năng;
+- không làm hỏng phím tắt hoặc luồng POS liên quan;
+- docs/API contract/data mapping được cập nhật;
+- demo/UAT với dữ liệu đại diện hoàn tất.
+
+## 13. Backlog khởi động đề xuất
+
+Thứ tự ticket đầu tiên:
+
+1. nhận backup MySQL production, folder ảnh và chạy data profile read-only;
+2. chốt capability matrix, PIN đổi actor, rule discount và ngưỡng chênh lệch két;
+3. thiết kế schema catalog/pricing/inventory/sales/payment v1;
+4. dựng app shell/menu tiếng Việt theo UI continuity;
+5. category vertical slice;
+6. unit vertical slice;
+7. product + base unit vertical slice;
+8. product units/conversion + unit-specific barcode vertical slice;
+9. unit-specific pricing và conversion snapshot;
+10. stock-in form + Excel template/import + last purchase cost;
+11. product import legacy preset;
+12. POS read-only catalog/search;
+13. cart + authoritative quote theo product unit;
+14. owner PIN price/discount approval;
+15. cash/manual-QR/partial/debt checkout + negative stock movement theo base quantity;
+16. shared shift/cash drawer và customer debt ledger;
+17. immutable invoice snapshot + receipt 58 mm;
+18. partial return/exchange + payment/debt/stock reversal;
+19. offline protocol và queue;
+20. optional lot/expiry alert job;
+21. ETL MySQL rehearsal đầu tiên và image migration.
+
+Không bắt đầu bằng việc copy `Cart.tsx`, controllers hoặc migrations cũ. Chúng là nguồn tham khảo hành vi; implementation mới phải tuân theo transaction, quyền và model dữ liệu đã chốt.
