@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('inventory_lots', function (Blueprint $table) {
@@ -46,7 +45,10 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->index(['source_type', 'source_id']);
-            $table->index(['branch_id', 'product_variant_id', 'created_at']);
+            $table->index(
+                ['branch_id', 'product_variant_id', 'created_at'],
+                'inv_mov_branch_variant_created_idx'
+            );
         });
     }
 
