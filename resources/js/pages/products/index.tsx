@@ -1,47 +1,18 @@
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+    ProductFormDialog,
+    ProductTable,
+    hasValidBaseUnit,
+    normalizeUnitRows,
+    type Product,
+    type ProductFormData,
+    type Unit,
+    type UnitRow,
+} from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
-import { formatMoney, formatQuantity } from '@/lib/format';
 import { Head, useForm } from '@inertiajs/react';
-import { Boxes, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { FormEvent, useState } from 'react';
-
-type Unit = { id: number; code: string; name: string };
-type UnitRow = {
-    id?: number;
-    unit_id: number;
-    conversion_to_base: number;
-    sale_price: number;
-    barcode: string;
-    is_base: boolean;
-    is_default_sale: boolean;
-};
-type Product = {
-    id: number;
-    sku: string;
-    name: string;
-    category_id: number | null;
-    image_path?: string;
-    track_lot: boolean;
-    track_expiry: boolean;
-    is_active: boolean;
-    category?: { name: string };
-    variants: Array<{
-        last_cost_base: number;
-        units: Array<{
-            id: number;
-            sale_price: number;
-            conversion_to_base: string;
-            is_base: boolean;
-            is_default_sale: boolean;
-            unit: Unit;
-            barcodes: Array<{ value: string }>;
-        }>;
-        balances: Array<{ quantity_base: string }>;
-    }>;
-};
 
 export default function ProductsPage({
     products,
@@ -55,16 +26,7 @@ export default function ProductsPage({
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const firstUnit = units[0]?.id ?? 0;
-    const form = useForm<{
-        name: string;
-        sku: string;
-        category_id: number | '';
-        image: File | null;
-        track_lot: boolean;
-        track_expiry: boolean;
-        is_active: boolean;
-        units: UnitRow[];
-    }>({
+    const initialData = (): ProductFormData => ({
         name: '',
         sku: '',
         category_id: '',
@@ -74,8 +36,13 @@ export default function ProductsPage({
         is_active: true,
         units: [{ unit_id: firstUnit, conversion_to_base: 1, sale_price: 0, barcode: '', is_base: true, is_default_sale: true }],
     });
+    const form = useForm<ProductFormData>(initialData());
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        if (!hasValidBaseUnit(form.data.units)) {
+            form.setError('units', 'Cần có đúng một đơn vị cơ sở với hệ số bằng 1.');
+            return;
+        }
         const options = {
             forceFormData: true,
             onSuccess: () => {
@@ -85,25 +52,16 @@ export default function ProductsPage({
             },
         };
         if (editingId) {
-            form.transform((data) => ({ ...data, _method: 'put' }));
-            form.post(`/products/${editingId}`, options);
+            form.transform((data) => ({ ...data, units: normalizeUnitRows(data.units), _method: 'put' }));
+            form.post(route('products.update', editingId), options);
         } else {
-            form.transform((data) => data);
-            form.post('/products', options);
+            form.transform((data) => ({ ...data, units: normalizeUnitRows(data.units) }));
+            form.post(route('products.store'), options);
         }
     };
     const addProduct = () => {
         setEditingId(null);
-        form.setData({
-            name: '',
-            sku: '',
-            category_id: '',
-            image: null,
-            track_lot: false,
-            track_expiry: false,
-            is_active: true,
-            units: [{ unit_id: firstUnit, conversion_to_base: 1, sale_price: 0, barcode: '', is_base: true, is_default_sale: true }],
-        });
+        form.setData(initialData());
         setOpen(true);
     };
     const editProduct = (product: Product) => {
@@ -117,17 +75,15 @@ export default function ProductsPage({
             track_lot: product.track_lot,
             track_expiry: product.track_expiry,
             is_active: product.is_active,
-            units: variant.units
-                .filter((row) => row)
-                .map((row) => ({
-                    id: row.id,
-                    unit_id: row.unit.id,
-                    conversion_to_base: Number(row.conversion_to_base),
-                    sale_price: row.sale_price,
-                    barcode: row.barcodes[0]?.value ?? '',
-                    is_base: row.is_base,
-                    is_default_sale: row.is_default_sale,
-                })),
+            units: (variant?.units ?? []).map((row) => ({
+                id: row.id,
+                unit_id: row.unit.id,
+                conversion_to_base: Number(row.conversion_to_base),
+                sale_price: row.sale_price,
+                barcode: row.barcodes[0]?.value ?? '',
+                is_base: row.is_base,
+                is_default_sale: row.is_default_sale,
+            })),
         });
         setOpen(true);
     };
@@ -145,8 +101,9 @@ export default function ProductsPage({
                 ...(field === 'is_base' && rowIndex === index ? { conversion_to_base: 1 } : {}),
             })),
         );
+
     return (
-        <AppLayout breadcrumbs={[{ title: 'Sản phẩm', href: '/products' }]}>
+        <AppLayout breadcrumbs={[{ title: 'Sản phẩm', href: route('products.index') }]}>
             <Head title="Sản phẩm" />
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between">
@@ -159,249 +116,20 @@ export default function ProductsPage({
                         Thêm sản phẩm
                     </Button>
                 </div>
-                <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                            <tr>
-                                <th className="px-4 py-3">Sản phẩm</th>
-                                <th className="px-4 py-3">Danh mục</th>
-                                <th className="px-4 py-3">Quy cách bán</th>
-                                <th className="px-4 py-3 text-right">Tồn đơn vị gốc</th>
-                                <th className="px-4 py-3 text-right">Giá vốn cuối</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {products.data.map((product) => {
-                                const variant = product.variants[0];
-                                return (
-                                    <tr key={product.id} className="border-t align-top">
-                                        <td className="px-4 py-3">
-                                            <div className="font-semibold">{product.name}</div>
-                                            <div className="text-xs text-slate-500">
-                                                {product.sku}
-                                                {product.track_expiry ? ' · Theo dõi HSD' : ''}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">{product.category?.name ?? '—'}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                {variant?.units.map((item) => (
-                                                    <span key={item.id} className="rounded border bg-slate-50 px-2 py-1 text-xs">
-                                                        {item.unit.name} × {Number(item.conversion_to_base)} · {formatMoney(item.sale_price)}đ{' '}
-                                                        {item.is_base && <b className="text-blue-700">(gốc)</b>}
-                                                        <small className="block text-slate-500">{item.barcodes[0]?.value || 'chưa có barcode'}</small>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td
-                                            className={`px-4 py-3 text-right font-semibold ${Number(variant?.balances[0]?.quantity_base ?? 0) < 0 ? 'text-red-600' : ''}`}
-                                        >
-                                            {formatQuantity(Number(variant?.balances[0]?.quantity_base ?? 0))}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">{formatMoney(variant?.last_cost_base ?? 0)}đ</td>
-                                        <td className="px-4">
-                                            <Button size="sm" variant="ghost" onClick={() => editProduct(product)}>
-                                                <Pencil className="mr-1 size-3" />
-                                                Sửa
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {!products.data.length && (
-                                <tr>
-                                    <td colSpan={6} className="py-20 text-center text-slate-400">
-                                        <Boxes className="mx-auto mb-2 size-10" />
-                                        Chưa có sản phẩm
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                <ProductTable products={products.data} onEdit={editProduct} />
             </div>
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>{editingId ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'}</DialogTitle>
-                        <DialogDescription>Khai báo đúng một đơn vị cơ sở. Ví dụ lon = 1, lốc = 6, thùng = 24.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={submit} className="space-y-4">
-                        <div className="grid gap-3 md:grid-cols-3">
-                            <div>
-                                <Label>Tên sản phẩm</Label>
-                                <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required />
-                                {form.errors.name && <p className="text-xs text-red-600">{form.errors.name}</p>}
-                            </div>
-                            <div>
-                                <Label>SKU</Label>
-                                <Input value={form.data.sku} onChange={(e) => form.setData('sku', e.target.value)} required />
-                            </div>
-                            <div>
-                                <Label>Danh mục</Label>
-                                <select
-                                    className="h-10 w-full rounded-md border bg-white px-3"
-                                    value={form.data.category_id}
-                                    onChange={(e) => form.setData('category_id', e.target.value ? Number(e.target.value) : '')}
-                                >
-                                    <option value="">Không phân loại</option>
-                                    {categories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <Label>Ảnh sản phẩm (tối đa 4 MB)</Label>
-                            <Input type="file" accept="image/*" onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)} />
-                        </div>
-                        <div className="flex gap-6 text-sm">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    className="mr-2"
-                                    checked={form.data.track_lot}
-                                    onChange={(e) => form.setData('track_lot', e.target.checked)}
-                                />
-                                Theo dõi lô
-                            </label>
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    className="mr-2"
-                                    checked={form.data.track_expiry}
-                                    onChange={(e) => form.setData('track_expiry', e.target.checked)}
-                                />
-                                Theo dõi hạn sử dụng
-                            </label>
-                        </div>
-                        <div>
-                            <div className="mb-2 flex items-center justify-between">
-                                <Label>Quy cách / đơn vị bán</Label>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                        form.setData('units', [
-                                            ...form.data.units,
-                                            {
-                                                unit_id: firstUnit,
-                                                conversion_to_base: 1,
-                                                sale_price: 0,
-                                                barcode: '',
-                                                is_base: false,
-                                                is_default_sale: false,
-                                            },
-                                        ])
-                                    }
-                                >
-                                    <Plus className="mr-1 size-3" />
-                                    Thêm đơn vị
-                                </Button>
-                            </div>
-                            <div className="space-y-2">
-                                {form.data.units.map((row, index) => (
-                                    <div
-                                        key={index}
-                                        className="grid items-end gap-2 rounded-md border bg-slate-50 p-3 md:grid-cols-[1fr_120px_150px_1fr_auto_auto_auto]"
-                                    >
-                                        <div>
-                                            <Label>Đơn vị</Label>
-                                            <select
-                                                className="h-9 w-full rounded-md border bg-white px-2"
-                                                value={row.unit_id}
-                                                onChange={(e) => updateUnit(index, { unit_id: Number(e.target.value) })}
-                                            >
-                                                {units.map((unit) => (
-                                                    <option key={unit.id} value={unit.id}>
-                                                        {unit.name} ({unit.code})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <Label>Hệ số</Label>
-                                            <Input
-                                                className="h-9"
-                                                type="number"
-                                                min="0.000001"
-                                                step="0.000001"
-                                                disabled={row.is_base}
-                                                value={row.conversion_to_base}
-                                                onChange={(e) => updateUnit(index, { conversion_to_base: Number(e.target.value) })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Giá bán</Label>
-                                            <Input
-                                                className="h-9"
-                                                type="number"
-                                                min="0"
-                                                value={row.sale_price}
-                                                onChange={(e) => updateUnit(index, { sale_price: Number(e.target.value) })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Barcode</Label>
-                                            <Input
-                                                className="h-9"
-                                                value={row.barcode}
-                                                onChange={(e) => updateUnit(index, { barcode: e.target.value })}
-                                            />
-                                        </div>
-                                        <label className="pb-2 text-xs">
-                                            <input
-                                                type="radio"
-                                                name="base"
-                                                checked={row.is_base}
-                                                onChange={() => chooseExclusive(index, 'is_base')}
-                                            />{' '}
-                                            ĐV gốc
-                                        </label>
-                                        <label className="pb-2 text-xs">
-                                            <input
-                                                type="radio"
-                                                name="default"
-                                                checked={row.is_default_sale}
-                                                onChange={() => chooseExclusive(index, 'is_default_sale')}
-                                            />{' '}
-                                            Bán mặc định
-                                        </label>
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            disabled={form.data.units.length === 1}
-                                            onClick={() =>
-                                                form.setData(
-                                                    'units',
-                                                    form.data.units.filter((_, rowIndex) => rowIndex !== index),
-                                                )
-                                            }
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                            {form.errors.units && <p className="mt-1 text-xs text-red-600">{form.errors.units}</p>}
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                                Hủy
-                            </Button>
-                            <Button type="submit" disabled={form.processing}>
-                                {editingId ? 'Cập nhật' : 'Lưu sản phẩm'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+            <ProductFormDialog
+                open={open}
+                editingId={editingId}
+                form={form}
+                categories={categories}
+                units={units}
+                firstUnit={firstUnit}
+                onOpenChange={setOpen}
+                onSubmit={submit}
+                updateUnit={updateUnit}
+                chooseExclusive={chooseExclusive}
+            />
         </AppLayout>
     );
 }

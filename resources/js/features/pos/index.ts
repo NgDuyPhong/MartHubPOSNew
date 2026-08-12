@@ -1,3 +1,13 @@
+export { cacheCatalog } from './api/catalog-cache-repository';
+export { pendingSales, queueSale, removePendingSale } from './api/offline-sale-repository';
+export type { PendingSale } from './api/offline-sale-repository';
+export { syncPendingSales } from './api/offline-sale-sync';
+export { createSale } from './api/pos-api';
+export { useConnectivity } from './hooks/use-connectivity';
 export { usePosCart } from './hooks/use-pos-cart';
+export { usePosCheckout } from './hooks/use-pos-checkout';
+export { usePosShortcuts } from './hooks/use-pos-shortcuts';
 export { calculateCartTotals, filterCatalog, findBarcodeMatch, requiresOwnerOverride } from './model/selectors';
 export type { CartLine, CartTotals, Customer, Product, ProductUnit, SaleReceipt, Shift, Variant } from './model/types';
+export { validateCheckout } from './model/validation';
+export type { CheckoutDraft, CheckoutErrors } from './model/validation';

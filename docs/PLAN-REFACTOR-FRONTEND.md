@@ -206,8 +206,8 @@ Feature component được phép compose các tầng trên nhưng không sửa p
 - Page gọi trực tiếp `fetch`, truy cập CSRF meta, `window`, `document`, `crypto`, ExcelJS và IndexedDB.
 - Logic tính toán thường nằm ngay trong render hoặc event handler.
 - Một số page có ít dòng nhưng mỗi dòng chứa lượng JSX rất lớn; số dòng không phản ánh đúng độ phức tạp.
-- Không có frontend unit/component/browser test được phát hiện trong repository.
-- ESLint mới kiểm tra React/TypeScript cơ bản, chưa có rule bảo vệ dependency giữa `pages`, `features`, `shared` và `ui`.
+- Chưa có frontend automated test được phát hiện trong repository; automated test không nằm trong phạm vi milestone hiện tại.
+- ESLint đã có rule bảo vệ dependency giữa `pages`, `features`, `layouts`, `components` và `lib`; rule được áp dụng theo từng tầng trong `eslint.config.js`.
 
 ### 2.3. Điểm tốt cần giữ
 
@@ -331,7 +331,7 @@ Quy tắc cụ thể:
 - Chụp/UAT các luồng POS hiện có trước khi di chuyển file.
 - Bổ sung script không tự sửa source: `lint:check`, `typecheck` và `check`.
 - Áp dụng `.prettierrc` cấp repository với LF, 4 spaces cho code, 2 spaces cho JSON/YAML và print width thống nhất.
-- Bổ sung frontend test runner và React Testing Library sau khi được duyệt dependency.
+- Không thêm frontend test runner trong milestone hiện tại; ưu tiên guardrail build và manual UAT.
 - Chốt convention tên file `kebab-case`, component `PascalCase`, hook `useXxx`.
 - Thiết lập import restriction bằng ESLint để bảo vệ dependency rules.
 
@@ -474,7 +474,7 @@ POS là ưu tiên đầu vì có độ phức tạp và rủi ro cao nhất. Kh�
   - override required;
   - barcode exact match.
 - Tách validation checkout thành hàm pure trả error theo field.
-- Viết unit test cho selector và validation trước khi tách UI sâu hơn.
+- Giữ selector và validation là pure logic, kiểm tra hành vi qua TypeScript/build và manual POS UAT trong milestone hiện tại.
 
 ### Bước 2.2 — Tách presentational component
 
@@ -510,7 +510,7 @@ Các component này chưa tự gọi API; nhận props và callback từ page/co
 
 - `pages/pos/index.tsx` dưới 150–200 dòng.
 - Page không gọi `fetch`, IndexedDB hoặc đọc CSRF trực tiếp.
-- Cart/checkout selector có test.
+- Cart/checkout selector và validation là pure logic, không làm thay đổi hành vi nghiệp vụ.
 - Cash, QR, debt, owner PIN, offline, shortcut và receipt giữ nguyên hành vi.
 - Không xuất hiện circular import giữa POS và shared components.
 
@@ -536,7 +536,7 @@ Thực hiện từng feature, không di chuyển tất cả cùng lúc.
 
 - Tách `OpenShiftDialog`, `CashMovementDialog`, `CloseShiftDialog`, `ShiftTable`.
 - Mỗi dialog sở hữu một Inertia form riêng.
-- Tách tính tổng mệnh giá thành selector có test.
+- Tách tính tổng mệnh giá thành selector thuần, không chứa JSX.
 
 ### Sales
 
@@ -573,39 +573,23 @@ Thực hiện từng feature, không di chuyển tất cả cùng lúc.
 - Navigation có một nguồn cấu hình.
 - Shared component không phụ thuộc feature cụ thể.
 
-## 11. Pha 5 — Testing và CI
+## 11. Pha 5 — Quality gates và UAT
 
-### Test pyramid frontend
+### Phạm vi hiện tại
 
-1. **Pure unit tests**:
-   - cart reducer/selectors;
-   - payment/debt/change;
-   - barcode matching;
-   - return remaining quantity;
-   - shift cash count;
-   - import row mapping.
-2. **Component tests**:
-   - inline checkout validation;
-   - QR confirmation;
-   - owner PIN visibility;
-   - open shift error;
-   - offline queue status.
-3. **Browser E2E**:
-   - login → mở ca → bán cash;
-   - QR confirmation;
-   - partial debt;
-   - offline queue → reconnect → sync;
-   - return và reprint receipt.
+- Không viết frontend Unit Test trong giai đoạn hiện tại.
+- Không thêm test runner hoặc dependency test mới chỉ để chuẩn bị trước.
+- Các luồng POS quan trọng được kiểm tra bằng manual UAT sau mỗi lát cắt refactor.
+- Component test/browser E2E chỉ xem xét lại ở một milestone riêng khi có nhu cầu vận hành và dependency được duyệt.
 
-### CI gate
+### Guardrail hiện tại
 
 ```text
 format:check
   → lint:check
   → typecheck
-  → unit/component tests
   → vite build
-  → browser smoke cho luồng P0
+  → manual UAT cho luồng POS/P0
 ```
 
 ## 12. Thứ tự ticket đề xuất
@@ -615,38 +599,54 @@ format:check
 | Ticket | Trạng thái | Ghi chú |
 |---|---|---|
 | 1 | Đã triển khai code, chờ UAT production | Retirement worker, cleanup bootstrap và quy tắc không cache HTML đã áp dụng; cần xác nhận trên Hostinger. |
-| 2 | Đã triển khai | Đã có `format:check`, `lint:check`, `typecheck`, `check`; ESLint boundary nâng cao vẫn để sau khi cấu trúc feature ổn định. |
+| 2 | Đã hoàn tất | Đã có `format:check`, `lint:check`, `typecheck`, `check` và import-boundary rules trong `eslint.config.js`; guardrail hiện pass. |
 | 3 | Đã triển khai | Formatter, HTTP/CSRF client và `HttpError` dùng chung đã tạo. |
-| 4 | Đã triển khai | POS types/selectors đã chuyển vào `features/pos/model`. |
-| 5 | Chưa triển khai | Chưa thêm frontend test runner vì cần chốt dependency test với dự án. |
-| 6–8 | Chưa triển khai | Sẽ tách JSX presentational theo từng lát cắt nhỏ. |
-| 9 | Đang triển khai | `usePosCart` đã tách; checkout/shortcut/connectivity tiếp tục tách riêng. |
-| 10–18 | Chưa triển khai | Giữ nguyên thứ tự ưu tiên sau khi POS foundation ổn định. |
+| 4 | Đã triển khai | POS types/selectors và checkout validation đã chuyển vào `features/pos/model`; không viết Unit Test trong milestone hiện tại. |
+| 5–7 | Đã hoàn tất code, chờ UAT | POS đã có `PosStatusBar`, `CatalogPanel`, `CartTable`, `CartSummary`, `OpenShiftDialog`, `ReceiptPreview` và `SaleSuccessBar`; còn manual UAT interaction. |
+| 8 | Đã hoàn tất code, chờ UAT | `usePosCart`, `usePosCheckout`, `usePosShortcuts` và `useConnectivity` đã tách; còn manual UAT keyboard/offline. |
+| 9 | Đã hoàn tất code, chờ UAT | POS API, IndexedDB sale repository, catalog cache repository và sync orchestration đã tách trong `features/pos/api`; cần kiểm tra luồng online/offline thực tế. |
+| 10 | Đã hoàn tất code, chờ UAT | `pages/pos/index.tsx` còn 150 dòng và chỉ compose props, hook, feature components; còn full POS UAT. |
+| 11 | Đã hoàn tất code, chờ UAT | Đã tách `StockReceiptForm`, `StockReceiptItemsTable`, `StockReceiptHistory`, parser CSV/XLSX và template download; còn manual UAT import/nhập kho. |
+| 12 | Đã hoàn tất code, chờ UAT | Đã tách `ProductFormDialog`, `ProductUnitsEditor`, `ProductTable` và validation base unit; còn manual UAT CRUD/unit editor. |
+| 13 | Đã hoàn tất code, chờ UAT | Đã tách `OpenShiftDialog`, `CashMovementDialog`, `CloseShiftDialog`, `ShiftTable` và selector đếm tiền; còn manual UAT chuyển trạng thái ca. |
+| 14 | Đã hoàn tất code, chờ UAT | Đã tách `SaleReceipt`, `ReturnDialog`, `ReturnItemsTable` và model return payload; còn manual UAT đổi/trả và in receipt. |
+| 15 | Đã hoàn tất code, chờ UAT | Đã tách `CustomerFormDialog`, `CustomerTable`, `DebtPaymentDialog` và selector công nợ; còn manual UAT thu nợ. |
+| 16 | Đã hoàn tất audit/config, chờ cleanup decision | Navigation đã đưa ra `config/navigation.ts`; inventory starter được ghi nhận tại `docs/STARTER-SHELL-INVENTORY.md`. Candidate cleanup chỉ thực hiện sau xác nhận deployment. |
+
+### Báo cáo tiến độ hiện tại
+
+- **Pha 0:** đã hoàn thành phần code chính; P0 Service Worker còn chờ UAT production trên Hostinger.
+- **Pha 1:** formatter, HTTP/CSRF, error normalization, guardrail và import-boundary rules đã hoàn tất.
+- **POS foundation:** đã hoàn thành ticket 4 và ticket 5–10 theo thứ tự mới: model, UI components, hooks, API/offline gateway và page mỏng.
+- **Guardrail:** `format:check`, `lint:check`, `typecheck` và `vite build` đang pass.
+- **Pha 3:** đã hoàn tất code ticket 11–15; mỗi ticket còn manual UAT theo nghiệp vụ tương ứng.
+- **Pha 4:** đã hoàn tất navigation config và starter inventory; candidate cleanup được giữ lại để tránh xóa nhầm entry point ngoài route map.
+- **Unit Test:** loại khỏi milestone hiện tại; không dùng làm điều kiện hoàn thành các ticket nghiệp vụ.
 
 1. Xử lý P0 Service Worker `/pos`: phát hành worker retirement, tự unregister/xóa cache cũ, tạm tắt đăng ký mới và UAT production khi bypass tắt.
 2. Thêm `typecheck`, `lint:check`, `check` scripts và import boundary rules.
 3. Tạo shared formatters và error normalization.
 4. Tách POS types và selectors.
-5. Thêm test cho cart/payment/checkout validation.
-6. Tách `PosStatusBar`, `CatalogPanel`, `ProductCard`.
-7. Tách `CartTable`, `CartSummary`.
-8. Tách `InlineCheckout`, `OpenShiftDialog`, `ReceiptPreview`, `SaleSuccessBar`.
-9. Tạo `usePosCart`, `usePosCheckout`, `usePosShortcuts`.
-10. Tách POS API, IndexedDB repository và sync service.
-11. Làm mỏng `pages/pos/index.tsx` và chạy full POS UAT.
-12. Refactor stock receipt/import.
-13. Refactor products/unit editor.
-14. Refactor shifts.
-15. Refactor sales/return/receipt.
-16. Refactor customers/debt.
-17. Phân loại `welcome.tsx` và starter components; chỉ cleanup sau khi backlog xác nhận không cần.
-18. Bổ sung component tests và browser E2E.
+5. Tách `PosStatusBar` và `CatalogPanel` (product card có thể tiếp tục colocation trong catalog cho đến khi có consumer thứ hai).
+6. Tách `CartTable`, `CartSummary`.
+7. Tách `InlineCheckout`, `OpenShiftDialog`, `ReceiptPreview`, `SaleSuccessBar`.
+8. Tạo `usePosCart`, `usePosCheckout`, `usePosShortcuts`.
+9. Tách POS API, IndexedDB repository và sync service.
+10. Làm mỏng `pages/pos/index.tsx` và chạy full POS UAT.
+11. Refactor stock receipt/import.
+12. Refactor products/unit editor.
+13. Refactor shifts.
+14. Refactor sales/return/receipt.
+15. Refactor customers/debt.
+16. Phân loại `welcome.tsx` và starter components; chỉ cleanup sau khi backlog xác nhận không cần.
+
+> Ghi chú phạm vi: Unit Test, component test và browser E2E được loại khỏi roadmap triển khai hiện tại. Nếu cần, chúng sẽ được lập thành milestone chất lượng riêng sau khi các feature nghiệp vụ ổn định.
 
 ## 13. Definition of Done cho mỗi ticket refactor
 
 - Không thay đổi hành vi nghiệp vụ ngoài acceptance criteria của ticket.
 - TypeScript, format, lint và build pass.
-- Pure logic mới tách có test phù hợp.
+- Pure logic mới tách phải có type contract rõ và được kiểm tra qua guardrail/manual UAT phù hợp; chưa bắt buộc viết Unit Test.
 - Không thêm URL raw, formatter lặp hoặc type domain trùng.
 - Không import ngược từ `ui/shared/lib` vào `features/pages`.
 - Loading, validation, error, offline và permission state được giữ nguyên hoặc tốt hơn.

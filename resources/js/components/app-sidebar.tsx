@@ -1,20 +1,9 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
+import { mainNavItems } from '@/config/navigation';
 import { Link } from '@inertiajs/react';
-import { Boxes, ClipboardList, FileText, Gauge, PackagePlus, ShoppingCart, Store, Users, WalletCards } from 'lucide-react';
-
-const mainNavItems: NavItem[] = [
-    { title: 'Bán hàng', url: '/pos', icon: ShoppingCart },
-    { title: 'Tổng quan', url: '/dashboard', icon: Gauge },
-    { title: 'Hóa đơn', url: '/sales', icon: FileText },
-    { title: 'Sản phẩm', url: '/products', icon: Boxes },
-    { title: 'Nhập kho', url: '/stock-receipts', icon: PackagePlus },
-    { title: 'Tồn kho', url: '/inventory', icon: ClipboardList },
-    { title: 'Khách & nợ', url: '/customers', icon: Users },
-    { title: 'Ca / két', url: '/shifts', icon: WalletCards },
-];
+import { Store } from 'lucide-react';
 
 export function AppSidebar() {
     return (

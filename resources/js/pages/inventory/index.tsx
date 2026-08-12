@@ -36,7 +36,7 @@ export default function InventoryPage({
                                 <div key={lot.id} className="rounded-md border border-orange-200 bg-white p-3 text-sm">
                                     <div className="font-semibold">{lot.product_variant.product.name}</div>
                                     <div className="text-slate-500">
-                                        Lô {lot.lot_number || 'không mã'}  ·  HSD {formatDate(lot.expiry_date)}
+                                        Lô {lot.lot_number || 'không mã'} · HSD {formatDate(lot.expiry_date)}
                                     </div>
                                     <Badge className="mt-2 bg-orange-100 text-orange-800">Chỉ cảnh báo, không chặn bán</Badge>
                                 </div>

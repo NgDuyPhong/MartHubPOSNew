@@ -27,9 +27,7 @@ export default function SalesPage({
             <div className="space-y-4 p-4">
                 <div>
                     <h1 className="text-2xl font-bold">Hóa đơn bán hàng</h1>
-                    <p className="text-sm text-slate-500">
-                        Dữ liệu snapshot giữ nguyên tên, đơn vị, giá, chiết khấu và giá vốn tại thời điểm bán.
-                    </p>
+                    <p className="text-sm text-slate-500">Dữ liệu snapshot giữ nguyên tên, đơn vị, giá, chiết khấu và giá vốn tại thời điểm bán.</p>
                 </div>
                 <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
                     <table className="w-full text-sm">
