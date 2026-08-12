@@ -3,28 +3,208 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/format';
 import { Head, useForm } from '@inertiajs/react';
 import { Banknote, Plus, Users } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
-const money = new Intl.NumberFormat('vi-VN');
 type Customer = { id: number; code: string; name: string; phone?: string; address?: string; debit_total?: number; credit_total?: number };
 
-export default function CustomersPage({ customers, activeShift }: { customers: { data: Customer[] }; activeShift: { id: number; code: string } | null }) {
+export default function CustomersPage({
+    customers,
+    activeShift,
+}: {
+    customers: { data: Customer[] };
+    activeShift: { id: number; code: string } | null;
+}) {
     const [open, setOpen] = useState(false);
     const [paymentCustomer, setPaymentCustomer] = useState<(Customer & { balance: number }) | null>(null);
     const form = useForm({ name: '', phone: '', address: '', note: '' });
-    const paymentForm = useForm<{ shift_id: number; method: string; amount: number; reference: string; manually_confirmed: boolean; note: string }>({ shift_id: activeShift?.id ?? 0, method: 'cash', amount: 0, reference: '', manually_confirmed: false, note: '' });
-    const submit = (event: FormEvent) => { event.preventDefault(); form.post('/customers', { onSuccess: () => { setOpen(false); form.reset(); } }); };
-    const submitPayment = (event: FormEvent) => { event.preventDefault(); if (!paymentCustomer) return; paymentForm.post(`/customers/${paymentCustomer.id}/payments`, { onSuccess: () => { setPaymentCustomer(null); paymentForm.reset(); } }); };
+    const paymentForm = useForm<{ shift_id: number; method: string; amount: number; reference: string; manually_confirmed: boolean; note: string }>({
+        shift_id: activeShift?.id ?? 0,
+        method: 'cash',
+        amount: 0,
+        reference: '',
+        manually_confirmed: false,
+        note: '',
+    });
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.post('/customers', {
+            onSuccess: () => {
+                setOpen(false);
+                form.reset();
+            },
+        });
+    };
+    const submitPayment = (event: FormEvent) => {
+        event.preventDefault();
+        if (!paymentCustomer) return;
+        paymentForm.post(`/customers/${paymentCustomer.id}/payments`, {
+            onSuccess: () => {
+                setPaymentCustomer(null);
+                paymentForm.reset();
+            },
+        });
+    };
 
-    return <AppLayout breadcrumbs={[{ title: 'Khách hàng & công nợ', href: '/customers' }]}>
-        <Head title="Khách hàng & công nợ" />
-        <div className="space-y-4 p-4">
-            <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold">Khách hàng & công nợ</h1><p className="text-sm text-slate-500">Số điện thoại không bắt buộc; khách ghi nợ được nhận diện bằng mã nội bộ.</p></div><Button onClick={() => setOpen(true)}><Plus className="mr-2 size-4" />Thêm khách hàng</Button></div>
-            <div className="overflow-hidden rounded-lg border bg-white shadow-sm"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Mã</th><th className="px-4 py-3">Khách hàng</th><th className="px-4 py-3">Điện thoại</th><th className="px-4 py-3">Địa chỉ</th><th className="px-4 py-3 text-right">Còn nợ</th><th></th></tr></thead><tbody>{customers.data.map((customer) => { const balance = Number(customer.debit_total ?? 0) - Number(customer.credit_total ?? 0); return <tr key={customer.id} className="border-t"><td className="px-4 py-3 text-slate-500">{customer.code}</td><td className="px-4 font-semibold">{customer.name}</td><td className="px-4">{customer.phone || '—'}</td><td className="px-4">{customer.address || '—'}</td><td className={`px-4 text-right font-bold ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{money.format(balance)}đ</td><td className="px-4 text-right">{balance > 0 && <Button size="sm" variant="outline" disabled={!activeShift} onClick={() => { setPaymentCustomer({ ...customer, balance }); paymentForm.setData('amount', balance); }}><Banknote className="mr-1 size-3" />Thu nợ</Button>}</td></tr>})}{!customers.data.length && <tr><td colSpan={6} className="py-20 text-center text-slate-400"><Users className="mx-auto mb-2 size-10" />Chưa có khách hàng</td></tr>}</tbody></table></div>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Thêm khách hàng</DialogTitle><DialogDescription>Tên là bắt buộc để nhận diện công nợ; số điện thoại có thể để trống.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-3"><div><Label>Tên khách hàng *</Label><Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required /></div><div><Label>Số điện thoại</Label><Input value={form.data.phone} onChange={(e) => form.setData('phone', e.target.value)} /></div><div><Label>Địa chỉ</Label><Input value={form.data.address} onChange={(e) => form.setData('address', e.target.value)} /></div><div><Label>Ghi chú</Label><Input value={form.data.note} onChange={(e) => form.setData('note', e.target.value)} /></div><DialogFooter><Button type="submit" disabled={form.processing}>Lưu khách hàng</Button></DialogFooter></form></DialogContent></Dialog>
-        <Dialog open={!!paymentCustomer} onOpenChange={(value) => !value && setPaymentCustomer(null)}><DialogContent><DialogHeader><DialogTitle>Thu công nợ</DialogTitle><DialogDescription>{paymentCustomer?.name} đang nợ {money.format(paymentCustomer?.balance ?? 0)}đ. Khoản thu sẽ vào ca {activeShift?.code}.</DialogDescription></DialogHeader><form onSubmit={submitPayment} className="space-y-3"><div><Label>Số tiền thu</Label><Input type="number" min="1" max={paymentCustomer?.balance} value={paymentForm.data.amount} onChange={(e) => paymentForm.setData('amount', Number(e.target.value))} /></div><div><Label>Phương thức</Label><select className="h-10 w-full rounded-md border bg-white px-3" value={paymentForm.data.method} onChange={(e) => paymentForm.setData('method', e.target.value)}><option value="cash">Tiền mặt</option><option value="qr">Chuyển khoản / QR</option></select></div>{paymentForm.data.method === 'qr' && <label className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"><input type="checkbox" checked={paymentForm.data.manually_confirmed} onChange={(e) => paymentForm.setData('manually_confirmed', e.target.checked)} />Đã kiểm tra thủ công tiền vào tài khoản</label>}<div><Label>Ghi chú</Label><Input value={paymentForm.data.note} onChange={(e) => paymentForm.setData('note', e.target.value)} /></div><DialogFooter><Button type="submit" disabled={paymentForm.processing}>Ghi nhận thu nợ</Button></DialogFooter></form></DialogContent></Dialog>
-    </AppLayout>;
+    return (
+        <AppLayout breadcrumbs={[{ title: 'Khách hàng & công nợ', href: '/customers' }]}>
+            <Head title="Khách hàng & công nợ" />
+            <div className="space-y-4 p-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold">Khách hàng & công nợ</h1>
+                        <p className="text-sm text-slate-500">
+                            Số điện thoại không bắt buộc; khách ghi nợ được nhận diện bằng mã nội bộ.
+                        </p>
+                    </div>
+                    <Button onClick={() => setOpen(true)}>
+                        <Plus className="mr-2 size-4" />
+                        Thêm khách hàng
+                    </Button>
+                </div>
+                <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-4 py-3">Mã</th>
+                                <th className="px-4 py-3">Khách hàng</th>
+                                <th className="px-4 py-3">Điện thoại</th>
+                                <th className="px-4 py-3">Địa chỉ</th>
+                                <th className="px-4 py-3 text-right">Còn nợ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {customers.data.map((customer) => {
+                                const balance = Number(customer.debit_total ?? 0) - Number(customer.credit_total ?? 0);
+                                return (
+                                    <tr key={customer.id} className="border-t">
+                                        <td className="px-4 py-3 text-slate-500">{customer.code}</td>
+                                        <td className="px-4 font-semibold">{customer.name}</td>
+                                        <td className="px-4">{customer.phone || '—'}</td>
+                                        <td className="px-4">{customer.address || '—'}</td>
+                                        <td className={`px-4 text-right font-bold ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                            {formatMoney(balance)}đ
+                                        </td>
+                                        <td className="px-4 text-right">
+                                            {balance > 0 && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={!activeShift}
+                                                    onClick={() => {
+                                                        setPaymentCustomer({ ...customer, balance });
+                                                        paymentForm.setData('amount', balance);
+                                                    }}
+                                                >
+                                                    <Banknote className="mr-1 size-3" />
+                                                    Thu nợ
+                                                </Button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {!customers.data.length && (
+                                <tr>
+                                    <td colSpan={6} className="py-20 text-center text-slate-400">
+                                        <Users className="mx-auto mb-2 size-10" />
+                                        Chưa có khách hàng
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Thêm khách hàng</DialogTitle>
+                        <DialogDescription>
+                            Tên là bắt buộc để nhận diện công nợ; số điện thoại có thể để trống.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={submit} className="space-y-3">
+                        <div>
+                            <Label>Tên khách hàng *</Label>
+                            <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required />
+                        </div>
+                        <div>
+                            <Label>Số điện thoại</Label>
+                            <Input value={form.data.phone} onChange={(e) => form.setData('phone', e.target.value)} />
+                        </div>
+                        <div>
+                            <Label>Địa chỉ</Label>
+                            <Input value={form.data.address} onChange={(e) => form.setData('address', e.target.value)} />
+                        </div>
+                        <div>
+                            <Label>Ghi chú</Label>
+                            <Input value={form.data.note} onChange={(e) => form.setData('note', e.target.value)} />
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={form.processing}>
+                                Lưu khách hàng
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!paymentCustomer} onOpenChange={(value) => !value && setPaymentCustomer(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Thu công nợ</DialogTitle>
+                        <DialogDescription>
+                            {paymentCustomer?.name} đang nợ {formatMoney(paymentCustomer?.balance ?? 0)}đ. Khoản thu sẽ vào ca{' '}
+                            {activeShift?.code}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={submitPayment} className="space-y-3">
+                        <div>
+                            <Label>Số tiền thu</Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                max={paymentCustomer?.balance}
+                                value={paymentForm.data.amount}
+                                onChange={(e) => paymentForm.setData('amount', Number(e.target.value))}
+                            />
+                        </div>
+                        <div>
+                            <Label>Phương thức</Label>
+                            <select
+                                className="h-10 w-full rounded-md border bg-white px-3"
+                                value={paymentForm.data.method}
+                                onChange={(e) => paymentForm.setData('method', e.target.value)}
+                            >
+                                <option value="cash">Tiền mặt</option>
+                                <option value="qr">Chuyển khoản / QR</option>
+                            </select>
+                        </div>
+                        {paymentForm.data.method === 'qr' && (
+                            <label className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={paymentForm.data.manually_confirmed}
+                                    onChange={(e) => paymentForm.setData('manually_confirmed', e.target.checked)}
+                                />
+                                Đã kiểm tra thủ công tiền vào tài khoản
+                            </label>
+                        )}
+                        <div>
+                            <Label>Ghi chú</Label>
+                            <Input value={paymentForm.data.note} onChange={(e) => paymentForm.setData('note', e.target.value)} />
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={paymentForm.processing}>
+                                Ghi nhận thu nợ
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </AppLayout>
+    );
 }

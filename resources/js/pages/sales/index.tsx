@@ -1,9 +1,80 @@
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
+import { formatDateTime, formatMoney } from '@/lib/format';
 import { Head, Link } from '@inertiajs/react';
 import { FileText } from 'lucide-react';
-const money = new Intl.NumberFormat('vi-VN');
 
-export default function SalesPage({ sales }: { sales: { data: Array<{ id: number; invoice_number: string; total: number; paid_amount: number; debt_amount: number; source: string; sold_at: string; items_count: number; customer?: { name: string } }> } }) {
-    return <AppLayout breadcrumbs={[{ title: 'Hóa đơn', href: '/sales' }]}><Head title="Hóa đơn" /><div className="space-y-4 p-4"><div><h1 className="text-2xl font-bold">Hóa đơn bán hàng</h1><p className="text-sm text-slate-500">Dữ liệu snapshot giữ nguyên tên, đơn vị, giá, chiết khấu và giá vốn tại thời điểm bán.</p></div><div className="overflow-hidden rounded-lg border bg-white shadow-sm"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Hóa đơn</th><th className="px-4 py-3">Thời gian</th><th className="px-4 py-3">Khách hàng</th><th className="px-4 py-3 text-right">Tổng</th><th className="px-4 py-3 text-right">Đã thu</th><th className="px-4 py-3 text-right">Còn nợ</th><th className="px-4 py-3">Nguồn</th></tr></thead><tbody>{sales.data.map((sale) => <tr key={sale.id} className="border-t"><td className="px-4 py-3"><Link href={`/sales/${sale.id}`} className="font-semibold text-blue-700">{sale.invoice_number}</Link><div className="text-xs text-slate-500">{sale.items_count} dòng</div></td><td className="px-4">{new Date(sale.sold_at).toLocaleString('vi-VN')}</td><td className="px-4">{sale.customer?.name ?? 'Khách lẻ'}</td><td className="px-4 text-right font-bold">{money.format(sale.total)}đ</td><td className="px-4 text-right text-emerald-700">{money.format(sale.paid_amount)}đ</td><td className="px-4 text-right text-red-600">{money.format(sale.debt_amount)}đ</td><td className="px-4"><Badge variant="outline">{sale.source === 'offline_sync' ? 'Offline đã sync' : 'Online'}</Badge></td></tr>)}{!sales.data.length && <tr><td colSpan={7} className="py-20 text-center text-slate-400"><FileText className="mx-auto mb-2 size-10" />Chưa có hóa đơn</td></tr>}</tbody></table></div></div></AppLayout>;
+export default function SalesPage({
+    sales,
+}: {
+    sales: {
+        data: Array<{
+            id: number;
+            invoice_number: string;
+            total: number;
+            paid_amount: number;
+            debt_amount: number;
+            source: string;
+            sold_at: string;
+            items_count: number;
+            customer?: { name: string };
+        }>;
+    };
+}) {
+    return (
+        <AppLayout breadcrumbs={[{ title: 'Hóa đơn', href: '/sales' }]}>
+            <Head title="Hóa đơn" />
+            <div className="space-y-4 p-4">
+                <div>
+                    <h1 className="text-2xl font-bold">Hóa đơn bán hàng</h1>
+                    <p className="text-sm text-slate-500">
+                        Dữ liệu snapshot giữ nguyên tên, đơn vị, giá, chiết khấu và giá vốn tại thời điểm bán.
+                    </p>
+                </div>
+                <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-4 py-3">Hóa đơn</th>
+                                <th className="px-4 py-3">Thời gian</th>
+                                <th className="px-4 py-3">Khách hàng</th>
+                                <th className="px-4 py-3 text-right">Tổng</th>
+                                <th className="px-4 py-3 text-right">Đã thu</th>
+                                <th className="px-4 py-3 text-right">Còn nợ</th>
+                                <th className="px-4 py-3">Nguồn</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sales.data.map((sale) => (
+                                <tr key={sale.id} className="border-t">
+                                    <td className="px-4 py-3">
+                                        <Link href={`/sales/${sale.id}`} className="font-semibold text-blue-700">
+                                            {sale.invoice_number}
+                                        </Link>
+                                        <div className="text-xs text-slate-500">{sale.items_count} dòng</div>
+                                    </td>
+                                    <td className="px-4">{formatDateTime(sale.sold_at)}</td>
+                                    <td className="px-4">{sale.customer?.name ?? 'Khách lẻ'}</td>
+                                    <td className="px-4 text-right font-bold">{formatMoney(sale.total)}đ</td>
+                                    <td className="px-4 text-right text-emerald-700">{formatMoney(sale.paid_amount)}đ</td>
+                                    <td className="px-4 text-right text-red-600">{formatMoney(sale.debt_amount)}đ</td>
+                                    <td className="px-4">
+                                        <Badge variant="outline">{sale.source === 'offline_sync' ? 'Offline đã sync' : 'Online'}</Badge>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!sales.data.length && (
+                                <tr>
+                                    <td colSpan={7} className="py-20 text-center text-slate-400">
+                                        <FileText className="mx-auto mb-2 size-10" />
+                                        Chưa có hóa đơn
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </AppLayout>
+    );
 }

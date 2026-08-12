@@ -4,15 +4,256 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import { formatDateTime, formatMoney } from '@/lib/format';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Printer, RotateCcw } from 'lucide-react';
 import { FormEvent, useState } from 'react';
-const money = new Intl.NumberFormat('vi-VN');
-type Item = { id: number; product_name: string; product_sku: string; unit_name: string; quantity: string; unit_price: number; discount_amount: number; line_total: number; price_overridden: boolean; return_items: Array<{ quantity: string }> };
+type Item = {
+    id: number;
+    product_name: string;
+    product_sku: string;
+    unit_name: string;
+    quantity: string;
+    unit_price: number;
+    discount_amount: number;
+    line_total: number;
+    price_overridden: boolean;
+    return_items: Array<{ quantity: string }>;
+};
 
-export default function SaleShow({ sale, activeShift }: { sale: { id: number; invoice_number: string; sold_at: string; subtotal: number; discount_amount: number; total: number; paid_amount: number; debt_amount: number; change_amount: number; source: string; customer?: { name: string; phone?: string }; items: Item[]; payments: Array<{ id: number; method: string; direction: string; amount: number; manually_confirmed: boolean }> }; activeShift: { id: number; code: string } | null }) {
+export default function SaleShow({
+    sale,
+    activeShift,
+}: {
+    sale: {
+        id: number;
+        invoice_number: string;
+        sold_at: string;
+        subtotal: number;
+        discount_amount: number;
+        total: number;
+        paid_amount: number;
+        debt_amount: number;
+        change_amount: number;
+        source: string;
+        customer?: { name: string; phone?: string };
+        items: Item[];
+        payments: Array<{ id: number; method: string; direction: string; amount: number; manually_confirmed: boolean }>;
+    };
+    activeShift: { id: number; code: string } | null;
+}) {
     const [returnOpen, setReturnOpen] = useState(false);
-    const form = useForm({ shift_id: activeShift?.id ?? 0, type: 'refund', refund_method: 'cash', reason: '', items: sale.items.map((item) => ({ sale_item_id: item.id, quantity: 0, condition: 'resellable' })) });
-    const submit = (event: FormEvent) => { event.preventDefault(); form.transform((data) => ({ ...data, items: data.items.filter((item) => Number(item.quantity) > 0) })); form.post(`/sales/${sale.id}/returns`, { onSuccess: () => setReturnOpen(false) }); };
-    return <AppLayout breadcrumbs={[{ title: 'Hóa đơn', href: '/sales' }, { title: sale.invoice_number, href: `/sales/${sale.id}` }]}><Head title={sale.invoice_number} /><div className="space-y-4 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-3"><Link href="/sales"><Button variant="outline" size="icon"><ArrowLeft className="size-4" /></Button></Link><div><h1 className="text-2xl font-bold">{sale.invoice_number}</h1><p className="text-sm text-slate-500">{new Date(sale.sold_at).toLocaleString('vi-VN')} · {sale.customer?.name ?? 'Khách lẻ'}</p></div></div><div className="flex gap-2"><Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 size-4" />In 58mm</Button><Button disabled={!activeShift} onClick={() => setReturnOpen(true)}><RotateCcw className="mr-2 size-4" />Đổi / trả hàng</Button></div></div><div data-receipt className="overflow-hidden rounded-lg border bg-white shadow-sm"><div className="flex items-center justify-between border-b px-4 py-3"><div><div className="font-bold">MART HUB MINI MART</div><div className="text-xs text-slate-500">Hóa đơn snapshot</div></div><Badge variant="outline">{sale.source === 'offline_sync' ? 'Offline đã đồng bộ' : 'Online'}</Badge></div><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Sản phẩm</th><th className="px-4 py-3">Đơn vị</th><th className="px-4 py-3 text-right">SL</th><th className="px-4 py-3 text-right">Đơn giá</th><th className="px-4 py-3 text-right">Giảm</th><th className="px-4 py-3 text-right">Thành tiền</th></tr></thead><tbody>{sale.items.map((item) => <tr key={item.id} className="border-t"><td className="px-4 py-3"><div className="font-semibold">{item.product_name}</div><div className="text-xs text-slate-500">{item.product_sku}{item.price_overridden ? ' · Đã sửa giá (có duyệt)' : ''}</div></td><td className="px-4">{item.unit_name}</td><td className="px-4 text-right">{Number(item.quantity)}</td><td className="px-4 text-right">{money.format(item.unit_price)}đ</td><td className="px-4 text-right text-orange-600">{money.format(item.discount_amount)}đ</td><td className="px-4 text-right font-bold">{money.format(item.line_total)}đ</td></tr>)}</tbody></table><div className="ml-auto w-full max-w-sm space-y-2 border-t p-4 text-sm"><div className="flex justify-between"><span>Tạm tính</span><span>{money.format(sale.subtotal)}đ</span></div><div className="flex justify-between"><span>Giảm giá</span><span>-{money.format(sale.discount_amount)}đ</span></div><div className="flex justify-between text-lg font-bold"><span>Tổng cộng</span><span>{money.format(sale.total)}đ</span></div><div className="flex justify-between text-red-600"><span>Còn nợ</span><span>{money.format(sale.debt_amount)}đ</span></div></div></div></div><Dialog open={returnOpen} onOpenChange={setReturnOpen}><DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>Đổi / trả từ {sale.invoice_number}</DialogTitle><DialogDescription>Chỉ nhập số lượng cần trả. Hàng còn bán được sẽ cộng lại tồn kho.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-4"><div className="max-h-72 overflow-y-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50 text-left"><th className="p-2">Sản phẩm</th><th className="p-2">Có thể trả</th><th className="p-2">Số trả</th><th className="p-2">Tình trạng</th></tr></thead><tbody>{sale.items.map((item, index) => { const returned = item.return_items.reduce((sum, row) => sum + Number(row.quantity), 0); const remaining = Number(item.quantity) - returned; return <tr key={item.id} className="border-t"><td className="p-2 font-medium">{item.product_name} · {item.unit_name}</td><td className="p-2">{remaining}</td><td className="p-2"><Input type="number" min="0" max={remaining} step="0.001" value={form.data.items[index].quantity} onChange={(e) => form.setData('items', form.data.items.map((row, rowIndex) => rowIndex === index ? { ...row, quantity: Number(e.target.value) } : row))} /></td><td className="p-2"><select className="h-9 rounded-md border bg-white px-2" value={form.data.items[index].condition} onChange={(e) => form.setData('items', form.data.items.map((row, rowIndex) => rowIndex === index ? { ...row, condition: e.target.value } : row))}><option value="resellable">Còn bán được</option><option value="damaged">Hỏng / hủy</option></select></td></tr>; })}</tbody></table></div><div className="grid gap-3 md:grid-cols-3"><div><Label>Loại xử lý</Label><select className="h-10 w-full rounded-md border bg-white px-2" value={form.data.type} onChange={(e) => form.setData('type', e.target.value)}><option value="refund">Trả hàng</option><option value="exchange">Đổi hàng</option></select></div><div><Label>Hoàn tiền / cấn nợ</Label><select className="h-10 w-full rounded-md border bg-white px-2" value={form.data.refund_method} onChange={(e) => form.setData('refund_method', e.target.value)}><option value="cash">Tiền mặt</option><option value="qr">QR</option>{sale.customer && <option value="debt">Cấn trừ công nợ</option>}</select></div><div><Label>Lý do *</Label><Input value={form.data.reason} onChange={(e) => form.setData('reason', e.target.value)} required /></div></div>{!activeShift && <p className="text-sm text-red-600">Cần mở ca trước khi đổi trả.</p>}<DialogFooter><Button type="submit" disabled={form.processing || !activeShift}>Xác nhận đổi/trả</Button></DialogFooter></form></DialogContent></Dialog></AppLayout>;
+    const form = useForm({
+        shift_id: activeShift?.id ?? 0,
+        type: 'refund',
+        refund_method: 'cash',
+        reason: '',
+        items: sale.items.map((item) => ({ sale_item_id: item.id, quantity: 0, condition: 'resellable' })),
+    });
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.transform((data) => ({ ...data, items: data.items.filter((item) => Number(item.quantity) > 0) }));
+        form.post(`/sales/${sale.id}/returns`, { onSuccess: () => setReturnOpen(false) });
+    };
+    return (
+        <AppLayout
+            breadcrumbs={[
+                { title: 'Hóa đơn', href: '/sales' },
+                { title: sale.invoice_number, href: `/sales/${sale.id}` },
+            ]}
+        >
+            <Head title={sale.invoice_number} />
+            <div className="space-y-4 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                        <Link href="/sales">
+                            <Button variant="outline" size="icon">
+                                <ArrowLeft className="size-4" />
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-bold">{sale.invoice_number}</h1>
+                            <p className="text-sm text-slate-500">
+                                {formatDateTime(sale.sold_at)} · {sale.customer?.name ?? 'Khách lẻ'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => window.print()}>
+                            <Printer className="mr-2 size-4" />
+                            In 58mm
+                        </Button>
+                        <Button disabled={!activeShift} onClick={() => setReturnOpen(true)}>
+                            <RotateCcw className="mr-2 size-4" />
+                            Đổi / trả hàng
+                        </Button>
+                    </div>
+                </div>
+                <div data-receipt className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                    <div className="flex items-center justify-between border-b px-4 py-3">
+                        <div>
+                            <div className="font-bold">MART HUB MINI MART</div>
+                            <div className="text-xs text-slate-500">Hóa đơn snapshot</div>
+                        </div>
+                        <Badge variant="outline">{sale.source === 'offline_sync' ? 'Offline đã đồng bộ' : 'Online'}</Badge>
+                    </div>
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-4 py-3">Sản phẩm</th>
+                                <th className="px-4 py-3">Đơn vị</th>
+                                <th className="px-4 py-3 text-right">SL</th>
+                                <th className="px-4 py-3 text-right">Đơn giá</th>
+                                <th className="px-4 py-3 text-right">Giảm</th>
+                                <th className="px-4 py-3 text-right">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sale.items.map((item) => (
+                                <tr key={item.id} className="border-t">
+                                    <td className="px-4 py-3">
+                                        <div className="font-semibold">{item.product_name}</div>
+                                        <div className="text-xs text-slate-500">
+                                            {item.product_sku}
+                                            {item.price_overridden ? ' · Đã sửa giá (có duyệt)' : ''}
+                                        </div>
+                                    </td>
+                                    <td className="px-4">{item.unit_name}</td>
+                                    <td className="px-4 text-right">{Number(item.quantity)}</td>
+                                    <td className="px-4 text-right">{formatMoney(item.unit_price)}đ</td>
+                                    <td className="px-4 text-right text-orange-600">{formatMoney(item.discount_amount)}đ</td>
+                                    <td className="px-4 text-right font-bold">{formatMoney(item.line_total)}đ</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div className="ml-auto w-full max-w-sm space-y-2 border-t p-4 text-sm">
+                        <div className="flex justify-between">
+                            <span>Tạm tính</span>
+                            <span>{formatMoney(sale.subtotal)}đ</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Giảm giá</span>
+                            <span>-{formatMoney(sale.discount_amount)}đ</span>
+                        </div>
+                        <div className="flex justify-between text-lg font-bold">
+                            <span>Tổng cộng</span>
+                            <span>{formatMoney(sale.total)}đ</span>
+                        </div>
+                        <div className="flex justify-between text-red-600">
+                            <span>Còn nợ</span>
+                            <span>{formatMoney(sale.debt_amount)}đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Đổi / trả từ {sale.invoice_number}</DialogTitle>
+                        <DialogDescription>
+                            Chỉ nhập số lượng cần trả. hàng còn bán được sẽ cộng lại tồn kho.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={submit} className="space-y-4">
+                        <div className="max-h-72 overflow-y-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50 text-left">
+                                        <th className="p-2">Sản phẩm</th>
+                                        <th className="p-2">Có thể trả</th>
+                                        <th className="p-2">Số trả</th>
+                                        <th className="p-2">Tình trạng</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sale.items.map((item, index) => {
+                                        const returned = item.return_items.reduce((sum, row) => sum + Number(row.quantity), 0);
+                                        const remaining = Number(item.quantity) - returned;
+                                        return (
+                                            <tr key={item.id} className="border-t">
+                                                <td className="p-2 font-medium">
+                                                    {item.product_name} · {item.unit_name}
+                                                </td>
+                                                <td className="p-2">{remaining}</td>
+                                                <td className="p-2">
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max={remaining}
+                                                        step="0.001"
+                                                        value={form.data.items[index].quantity}
+                                                        onChange={(e) =>
+                                                            form.setData(
+                                                                'items',
+                                                                form.data.items.map((row, rowIndex) =>
+                                                                    rowIndex === index ? { ...row, quantity: Number(e.target.value) } : row,
+                                                                ),
+                                                            )
+                                                        }
+                                                    />
+                                                </td>
+                                                <td className="p-2">
+                                                    <select
+                                                        className="h-9 rounded-md border bg-white px-2"
+                                                        value={form.data.items[index].condition}
+                                                        onChange={(e) =>
+                                                            form.setData(
+                                                                'items',
+                                                                form.data.items.map((row, rowIndex) =>
+                                                                    rowIndex === index ? { ...row, condition: e.target.value } : row,
+                                                                ),
+                                                            )
+                                                        }
+                                                    >
+                                                        <option value="resellable">Còn bán được</option>
+                                                        <option value="damaged">Hỏng / hủy</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                            <div>
+                                <Label>Loại xử lý</Label>
+                                <select
+                                    className="h-10 w-full rounded-md border bg-white px-2"
+                                    value={form.data.type}
+                                    onChange={(e) => form.setData('type', e.target.value)}
+                                >
+                                    <option value="refund">Trả hàng</option>
+                                    <option value="exchange">Đổi hàng</option>
+                                </select>
+                            </div>
+                            <div>
+                                <Label>Hoàn tiền / cấn nợ</Label>
+                                <select
+                                    className="h-10 w-full rounded-md border bg-white px-2"
+                                    value={form.data.refund_method}
+                                    onChange={(e) => form.setData('refund_method', e.target.value)}
+                                >
+                                    <option value="cash">Tiền mặt</option>
+                                    <option value="qr">QR</option>
+                                    {sale.customer && <option value="debt">Cấn trừ công nợ</option>}
+                                </select>
+                            </div>
+                            <div>
+                                <Label>Lý do *</Label>
+                                <Input value={form.data.reason} onChange={(e) => form.setData('reason', e.target.value)} required />
+                            </div>
+                        </div>
+                        {!activeShift && <p className="text-sm text-red-600">Cần mở ca trước khi đổi trả.</p>}
+                        <DialogFooter>
+                            <Button type="submit" disabled={form.processing || !activeShift}>
+                                Xác nhận đổi/trả
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </AppLayout>
+    );
 }

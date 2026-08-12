@@ -1,3 +1,5 @@
+import { requestJson } from './http/client';
+
 const DB_NAME = 'marthub-pos';
 const DB_VERSION = 1;
 const SALES_STORE = 'pending-sales';
@@ -38,14 +40,21 @@ async function put(storeName: string, value: unknown, key?: IDBValidKey): Promis
     db.close();
 }
 
-export async function cacheCatalog(catalog: unknown): Promise<void> { await put(CATALOG_STORE, catalog, 'latest'); }
-export async function queueSale(sale: PendingSale): Promise<void> { await put(SALES_STORE, sale); }
+export async function cacheCatalog(catalog: unknown): Promise<void> {
+    await put(CATALOG_STORE, catalog, 'latest');
+}
+export async function queueSale(sale: PendingSale): Promise<void> {
+    await put(SALES_STORE, sale);
+}
 
 export async function pendingSales(): Promise<PendingSale[]> {
     const db = await database();
     return new Promise((resolve, reject) => {
         const request = db.transaction(SALES_STORE).objectStore(SALES_STORE).getAll();
-        request.onsuccess = () => { db.close(); resolve(request.result as PendingSale[]); };
+        request.onsuccess = () => {
+            db.close();
+            resolve(request.result as PendingSale[]);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -60,16 +69,17 @@ export async function removePendingSale(key: string): Promise<void> {
     db.close();
 }
 
-export async function syncPendingSales(csrf: string): Promise<{ synced: number; failed: number }> {
+export async function syncPendingSales(): Promise<{ synced: number; failed: number }> {
     let synced = 0;
     let failed = 0;
     for (const sale of await pendingSales()) {
         try {
-            const response = await fetch('/sales', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf }, body: JSON.stringify(sale) });
-            if (!response.ok) { failed++; continue; }
+            await requestJson('/sales', { method: 'POST', body: sale });
             await removePendingSale(sale.idempotency_key);
             synced++;
-        } catch { failed++; }
+        } catch {
+            failed++;
+        }
     }
     return { synced, failed };
 }

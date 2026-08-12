@@ -7,8 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans:
-        'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -153,13 +152,27 @@
     }
 
     body {
-        @apply bg-slate-100 text-foreground;
+        @apply text-foreground bg-slate-100;
     }
 }
 
 @media print {
-    @page { size: 58mm auto; margin: 2mm; }
-    body { width: 54mm; background: white; font-size: 10px; }
-    [data-print-hidden] { display: none !important; }
-    [data-receipt] { display: block !important; width: 54mm; box-shadow: none !important; border: 0 !important; }
+    @page {
+        size: 58mm auto;
+        margin: 2mm;
+    }
+    body {
+        width: 54mm;
+        background: white;
+        font-size: 10px;
+    }
+    [data-print-hidden] {
+        display: none !important;
+    }
+    [data-receipt] {
+        display: block !important;
+        width: 54mm;
+        box-shadow: none !important;
+        border: 0 !important;
+    }
 }

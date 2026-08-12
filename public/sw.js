@@ -1,32 +1,20 @@
-const CACHE = 'marthub-pos-shell-v1';
+const CACHE_PREFIX = 'marthub-pos-shell-';
 
+// Retirement worker for the previous app-shell implementation. It deliberately
+// does not intercept requests: Inertia pages and session responses must always
+// use the network and keep their X-Inertia response contract.
 self.addEventListener('install', (event) => {
-    event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(['/pos'])));
-    self.skipWaiting();
+    event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-});
+    event.waitUntil(
+        (async () => {
+            const cacheNames = await caches.keys();
 
-self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET') return;
-    const url = new URL(event.request.url);
-    if (url.origin !== self.location.origin) return;
-
-    if (event.request.mode === 'navigate') {
-        event.respondWith(fetch(event.request).then((response) => {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-            return response;
-        }).catch(() => caches.match('/pos')));
-        return;
-    }
-
-    event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-        if (response.ok && (url.pathname.startsWith('/build/') || url.pathname.startsWith('/storage/'))) {
-            caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
-        }
-        return response;
-    })));
+            await Promise.all(cacheNames.filter((cacheName) => cacheName.startsWith(CACHE_PREFIX)).map((cacheName) => caches.delete(cacheName)));
+            await self.clients.claim();
+            await self.registration.unregister();
+        })(),
+    );
 });

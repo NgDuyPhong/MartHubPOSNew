@@ -1,0 +1,7 @@
+interface:
+  display_name: "Frontend UI Style"
+  short_description: "Apply MartHub POS UI standards consistently"
+  default_prompt: "Use $frontend-ui-style to review and implement this MartHub POS interface consistently."
+
+policy:
+  allow_implicit_invocation: true
