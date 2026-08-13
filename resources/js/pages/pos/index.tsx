@@ -1,6 +1,7 @@
 import {
-    filterCatalog,
-    findBarcodeMatch,
+    filterCatalogWithIndex,
+    findBarcodeMatchWithIndex,
+    useCatalogSearch,
     useConnectivity,
     usePosCart,
     usePosCheckout,
@@ -15,7 +16,7 @@ import {
 import { CartSummary, CartTable, CatalogPanel, OpenShiftDialog, PosStatusBar, ReceiptPreview, SaleSuccessBar } from '@/features/pos/components';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 type PosProps = {
     catalog: Product[];
@@ -38,6 +39,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
     const openShiftForm = useForm({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
     const { cart, selectedKey, addLine, updateLine, removeLine, clearCart, selectLine } = usePosCart();
+    const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(catalog, query, categoryId);
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
     const { online, pendingCount, refreshPending } = useConnectivity(catalog, onSync);
     const handleSaleSuccess = useCallback((saleReceipt: SaleReceipt) => {
@@ -55,27 +57,33 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         onMessage: setMessage,
         onSuccess: handleSaleSuccess,
     });
-    const products = useMemo(() => filterCatalog(catalog, query, categoryId), [catalog, categoryId, query]);
+    const addUnit = useCallback(
+        (product: Product, variant: Variant, unit: ProductUnit) => {
+            setReceipt(null);
+            setReceiptPreviewOpen(false);
+            addLine(product, variant, unit);
+            setQuery('');
+            searchRef.current?.focus();
+        },
+        [addLine],
+    );
 
-    const addUnit = (product: Product, variant: Variant, unit: ProductUnit) => {
-        setReceipt(null);
-        setReceiptPreviewOpen(false);
-        addLine(product, variant, unit);
-        setQuery('');
-        searchRef.current?.focus();
-    };
-
-    const handleSearchKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key !== 'Enter' || !query.trim()) return;
-        const exact = findBarcodeMatch(catalog, query);
-        if (exact) addUnit(exact.product, exact.variant, exact.unit);
-        else if (products.length === 1) {
-            const product = products[0];
-            const variant = product.variants[0];
-            const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
-            if (variant && unit) addUnit(product, variant, unit);
-        }
-    };
+    const handleSearchKey = useCallback(
+        (event: React.KeyboardEvent<HTMLInputElement>) => {
+            if (event.key !== 'Enter' || !query.trim()) return;
+            const exact = findBarcodeMatchWithIndex(catalogSearchIndex, query);
+            if (exact) addUnit(exact.product, exact.variant, exact.unit);
+            else {
+                const matches = filterCatalogWithIndex(catalogSearchIndex, query, categoryId);
+                if (matches.length !== 1) return;
+                const product = matches[0];
+                const variant = product.variants[0];
+                const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
+                if (variant && unit) addUnit(product, variant, unit);
+            }
+        },
+        [addUnit, catalogSearchIndex, categoryId, query],
+    );
 
     usePosShortcuts({
         cartLength: cart.length,
@@ -107,10 +115,12 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 )}
                 <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
-                        catalog={catalog}
                         categories={categories}
                         query={query}
                         categoryId={categoryId}
+                        products={products}
+                        totalMatches={products.length}
+                        isSearchPending={isSearchPending}
                         searchRef={searchRef}
                         onQueryChange={setQuery}
                         onCategoryChange={setCategoryId}

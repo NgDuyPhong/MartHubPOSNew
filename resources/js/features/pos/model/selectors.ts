@@ -1,23 +1,60 @@
 import type { CartLine, CartTotals, Product } from './types';
 
-export function filterCatalog(catalog: Product[], query: string, categoryId: number | null): Product[] {
-    const normalizedQuery = query.trim().toLowerCase();
+export type BarcodeMatch = { product: Product; variant: CartLine['variant']; unit: CartLine['productUnit'] };
 
-    return catalog.filter((product) => {
-        if (categoryId && product.category_id !== categoryId) {
-            return false;
-        }
+export type CatalogSearchIndex = {
+    products: Product[];
+    records: Array<{ product: Product; searchableText: string }>;
+    barcodeMatches: Map<string, BarcodeMatch>;
+};
 
-        if (!normalizedQuery) {
-            return true;
-        }
+function normalizeSearchText(value: string): string {
+    return value.trim().toLowerCase();
+}
 
-        return (
-            product.name.toLowerCase().includes(normalizedQuery) ||
-            product.sku.toLowerCase().includes(normalizedQuery) ||
-            product.variants.some((variant) => variant.units.some((unit) => unit.barcodes.some((barcode) => barcode.value.includes(normalizedQuery))))
+export function buildCatalogSearchIndex(catalog: Product[]): CatalogSearchIndex {
+    const barcodeMatches = new Map<string, BarcodeMatch>();
+    const records = catalog.map((product) => {
+        const barcodes = product.variants.flatMap((variant) =>
+            variant.units.flatMap((unit) =>
+                unit.barcodes.map((barcode) => {
+                    const value = normalizeSearchText(barcode.value);
+                    const match = { product, variant, unit };
+
+                    if (value && !barcodeMatches.has(value)) {
+                        barcodeMatches.set(value, match);
+                    }
+
+                    return value;
+                }),
+            ),
         );
+
+        return {
+            product,
+            searchableText: [product.name, product.sku, ...barcodes].map(normalizeSearchText).join(' '),
+        };
     });
+
+    return { products: catalog, records, barcodeMatches };
+}
+
+export function filterCatalogWithIndex(index: CatalogSearchIndex, query: string, categoryId: number | null): Product[] {
+    const normalizedQuery = normalizeSearchText(query);
+
+    return index.records
+        .filter(({ product, searchableText }) => {
+            if (categoryId !== null && product.category_id !== categoryId) {
+                return false;
+            }
+
+            return !normalizedQuery || searchableText.includes(normalizedQuery);
+        })
+        .map(({ product }) => product);
+}
+
+export function filterCatalog(catalog: Product[], query: string, categoryId: number | null): Product[] {
+    return filterCatalogWithIndex(buildCatalogSearchIndex(catalog), query, categoryId);
 }
 
 export function calculateCartTotals(cart: CartLine[], cash: number, qr: number): CartTotals {
@@ -40,21 +77,10 @@ export function requiresOwnerOverride(cart: CartLine[]): boolean {
     return cart.some((line) => line.unitPrice !== line.productUnit.sale_price || line.discount > 0);
 }
 
-export function findBarcodeMatch(
-    catalog: Product[],
-    barcode: string,
-): { product: Product; variant: CartLine['variant']; unit: CartLine['productUnit'] } | null {
-    const normalizedBarcode = barcode.trim();
+export function findBarcodeMatch(catalog: Product[], barcode: string): BarcodeMatch | null {
+    return findBarcodeMatchWithIndex(buildCatalogSearchIndex(catalog), barcode);
+}
 
-    for (const product of catalog) {
-        for (const variant of product.variants) {
-            for (const unit of variant.units) {
-                if (unit.barcodes.some((item) => item.value === normalizedBarcode)) {
-                    return { product, variant, unit };
-                }
-            }
-        }
-    }
-
-    return null;
+export function findBarcodeMatchWithIndex(index: CatalogSearchIndex, barcode: string): BarcodeMatch | null {
+    return index.barcodeMatches.get(normalizeSearchText(barcode)) ?? null;
 }

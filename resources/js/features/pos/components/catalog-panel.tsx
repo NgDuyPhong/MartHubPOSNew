@@ -2,39 +2,111 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney, formatQuantity } from '@/lib/format';
 import { Package, Search } from 'lucide-react';
-import { useMemo } from 'react';
-import { filterCatalog } from '../model/selectors';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Product, ProductUnit, Variant } from '../model/types';
 
 type Category = { id: number; name: string; color?: string };
+const INITIAL_PRODUCT_BATCH_SIZE = 100;
+const PRODUCT_BATCH_SIZE = 100;
+
+const CatalogProductCard = memo(function CatalogProductCard({
+    product,
+    onAdd,
+}: {
+    product: Product;
+    onAdd: (product: Product, variant: Variant, unit: ProductUnit) => void;
+}) {
+    const variant = product.variants[0];
+    const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
+    const stock = Number(variant?.balances[0]?.quantity_base ?? 0);
+
+    const addDefault = () => {
+        if (variant && unit) onAdd(product, variant, unit);
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={addDefault}
+            className="group flex min-h-32 flex-col rounded-lg border bg-white p-3 text-left transition hover:border-blue-500 hover:shadow-md"
+        >
+            {product.image_path ? (
+                <img src={`/storage/${product.image_path}`} alt="" loading="lazy" decoding="async" className="mb-2 size-12 rounded-md object-cover" />
+            ) : (
+                <div className="mb-2 flex size-9 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                    <Package className="size-5" />
+                </div>
+            )}
+            <span className="line-clamp-2 min-h-10 text-sm font-semibold">{product.name}</span>
+            <span className="text-xs text-slate-500">
+                {product.sku} · Tồn {formatQuantity(stock)}
+            </span>
+            <div className="mt-auto flex w-full items-end justify-between">
+                <strong className="text-blue-700">{formatMoney(unit?.sale_price ?? 0)}đ</strong>
+                <span className="text-xs">/{unit?.unit.name}</span>
+            </div>
+            {variant && variant.units.length > 1 && (
+                <div className="mt-2 flex flex-wrap gap-1" onClick={(event) => event.stopPropagation()}>
+                    {variant.units.map((choice) => (
+                        <span
+                            key={choice.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onAdd(product, variant, choice)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    onAdd(product, variant, choice);
+                                }
+                            }}
+                            className="rounded bg-slate-100 px-1.5 py-1 text-[11px] hover:bg-blue-100"
+                        >
+                            {choice.unit.name}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </button>
+    );
+});
 
 export function CatalogPanel({
-    catalog,
     categories,
     query,
     categoryId,
+    products,
+    totalMatches,
+    isSearchPending,
     searchRef,
     onQueryChange,
     onCategoryChange,
     onSearchKey,
     onAdd,
 }: {
-    catalog: Product[];
     categories: Category[];
     query: string;
     categoryId: number | null;
+    products: Product[];
+    totalMatches: number;
+    isSearchPending: boolean;
     searchRef: React.RefObject<HTMLInputElement | null>;
     onQueryChange: (value: string) => void;
     onCategoryChange: (value: number | null) => void;
     onSearchKey: (event: React.KeyboardEvent<HTMLInputElement>) => void;
     onAdd: (product: Product, variant: Variant, unit: ProductUnit) => void;
 }) {
-    const products = useMemo(() => filterCatalog(catalog, query, categoryId), [catalog, categoryId, query]);
-    const addDefault = (product: Product) => {
-        const variant = product.variants[0];
-        const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
-        if (variant && unit) onAdd(product, variant, unit);
-    };
+    const [visibleCount, setVisibleCount] = useState(INITIAL_PRODUCT_BATCH_SIZE);
+    const visibleProducts = useMemo(() => products.slice(0, visibleCount), [products, visibleCount]);
+    const hasMoreProducts = visibleCount < products.length;
+
+    useEffect(() => {
+        setVisibleCount(INITIAL_PRODUCT_BATCH_SIZE);
+    }, [categoryId, query]);
+
+    const loadMoreProducts = useCallback(() => {
+        setVisibleCount((current) => Math.min(current + PRODUCT_BATCH_SIZE, products.length));
+    }, [products.length]);
 
     return (
         <section className="flex min-h-[420px] flex-col overflow-hidden rounded-lg border bg-white shadow-sm lg:col-span-2 lg:min-h-0">
@@ -66,52 +138,22 @@ export function CatalogPanel({
                         </Button>
                     ))}
                 </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-slate-500" aria-live="polite">
+                    <span>{totalMatches === 0 ? 'Không có sản phẩm phù hợp' : `Hiển thị ${visibleProducts.length}/${totalMatches} sản phẩm`}</span>
+                    {isSearchPending && <span>Đang cập nhật…</span>}
+                </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
                 <div className="grid auto-rows-min grid-cols-2 gap-2 xl:grid-cols-3">
-                    {products.map((product) => {
-                        const variant = product.variants[0];
-                        const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
-                        const stock = Number(variant?.balances[0]?.quantity_base ?? 0);
-                        return (
-                            <button
-                                key={product.id}
-                                onClick={() => addDefault(product)}
-                                className="group flex min-h-32 flex-col rounded-lg border bg-white p-3 text-left transition hover:border-blue-500 hover:shadow-md"
-                            >
-                                {product.image_path ? (
-                                    <img src={`/storage/${product.image_path}`} alt="" className="mb-2 size-12 rounded-md object-cover" />
-                                ) : (
-                                    <div className="mb-2 flex size-9 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                                        <Package className="size-5" />
-                                    </div>
-                                )}
-                                <span className="line-clamp-2 min-h-10 text-sm font-semibold">{product.name}</span>
-                                <span className="text-xs text-slate-500">
-                                    {product.sku} · Tồn {formatQuantity(stock)}
-                                </span>
-                                <div className="mt-auto flex w-full items-end justify-between">
-                                    <strong className="text-blue-700">{formatMoney(unit?.sale_price ?? 0)}đ</strong>
-                                    <span className="text-xs">/{unit?.unit.name}</span>
-                                </div>
-                                {variant && variant.units.length > 1 && (
-                                    <div className="mt-2 flex flex-wrap gap-1" onClick={(event) => event.stopPropagation()}>
-                                        {variant.units.map((choice) => (
-                                            <span
-                                                key={choice.id}
-                                                role="button"
-                                                onClick={() => onAdd(product, variant, choice)}
-                                                className="rounded bg-slate-100 px-1.5 py-1 text-[11px] hover:bg-blue-100"
-                                            >
-                                                {choice.unit.name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </button>
-                        );
-                    })}
+                    {visibleProducts.map((product) => (
+                        <CatalogProductCard key={product.id} product={product} onAdd={onAdd} />
+                    ))}
                 </div>
+                {hasMoreProducts && (
+                    <Button type="button" variant="outline" className="mt-3 w-full" onClick={loadMoreProducts}>
+                        Xem thêm {Math.min(PRODUCT_BATCH_SIZE, products.length - visibleCount)} sản phẩm
+                    </Button>
+                )}
             </div>
         </section>
     );
