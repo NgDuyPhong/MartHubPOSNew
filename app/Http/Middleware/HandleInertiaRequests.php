@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $legacyImportEnabled = config('legacy-product-import.enabled', true);
 
         return [
             ...parent::share($request),
@@ -48,6 +49,12 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                ...($legacyImportEnabled ? [
+                    'legacyImportPreview' => fn () => $request->session()->get('legacyImportPreview'),
+                ] : []),
+            ],
+            'features' => [
+                'legacyProductImportEnabled' => $legacyImportEnabled,
             ],
         ];
     }

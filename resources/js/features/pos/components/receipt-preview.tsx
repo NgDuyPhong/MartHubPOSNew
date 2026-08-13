@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatMoney } from '@/lib/format';
+import { CheckCircle2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { SaleReceipt } from '../model/types';
 
 export function ReceiptPreview({
@@ -68,10 +70,26 @@ export function ReceiptPreview({
     );
 }
 
-export function SaleSuccessBar({ receipt, onPreview, onClose }: { receipt: SaleReceipt; onPreview: () => void; onClose: () => void }) {
+export function SaleSuccessBar({ receipt, onPreview, durationMs = 5000 }: { receipt: SaleReceipt; onPreview: () => void; durationMs?: number }) {
+    const [visible, setVisible] = useState(true);
+
+    useEffect(() => {
+        setVisible(true);
+        const timer = window.setTimeout(() => setVisible(false), durationMs);
+
+        return () => window.clearTimeout(timer);
+    }, [durationMs, receipt.invoice_number]);
+
+    if (!visible) return null;
+
     return (
-        <div className="fixed inset-x-0 bottom-4 z-20 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg">
-            <div>
+        <div
+            className="fixed right-4 bottom-4 z-50 flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg"
+            role="status"
+            aria-live="polite"
+        >
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+            <div className="min-w-0 flex-1">
                 <div className="font-semibold">Đã lưu hóa đơn {receipt.invoice_number}</div>
                 <div>
                     {formatMoney(receipt.total)}đ · Đã thu {formatMoney(receipt.paid_amount)}đ
@@ -85,7 +103,7 @@ export function SaleSuccessBar({ receipt, onPreview, onClose }: { receipt: SaleR
                 <Button size="sm" onClick={onPreview}>
                     In
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onClose}>
+                <Button size="sm" variant="ghost" onClick={() => setVisible(false)}>
                     Đóng
                 </Button>
             </div>

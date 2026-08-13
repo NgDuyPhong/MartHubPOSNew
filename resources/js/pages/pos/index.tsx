@@ -40,6 +40,11 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
     const { cart, selectedKey, addLine, updateLine, removeLine, clearCart, selectLine } = usePosCart();
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
     const { online, pendingCount, refreshPending } = useConnectivity(catalog, onSync);
+    const handleSaleSuccess = useCallback((saleReceipt: SaleReceipt) => {
+        setReceipt(saleReceipt);
+        setReceiptPreviewOpen(false);
+        window.setTimeout(() => searchRef.current?.focus(), 0);
+    }, []);
     const checkout = usePosCheckout({
         cart,
         activeShift,
@@ -48,7 +53,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         clearCart,
         refreshPending,
         onMessage: setMessage,
-        onSuccess: setReceipt,
+        onSuccess: handleSaleSuccess,
     });
     const products = useMemo(() => filterCatalog(catalog, query, categoryId), [catalog, categoryId, query]);
 
@@ -143,7 +148,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 </div>
             </div>
             <OpenShiftDialog open={openShiftOpen} onOpenChange={setOpenShiftOpen} registers={registers} form={openShiftForm} searchRef={searchRef} />
-            {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} onClose={() => setReceipt(null)} />}
+            {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} />}
             <ReceiptPreview receipt={receipt} open={receiptPreviewOpen} onOpenChange={setReceiptPreviewOpen} />
         </AppLayout>
     );

@@ -2,10 +2,14 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { mainNavItems } from '@/config/navigation';
-import { Link } from '@inertiajs/react';
+import { type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import { Store } from 'lucide-react';
 
 export function AppSidebar() {
+    const { props } = usePage<SharedData>();
+    const legacyImportEnabled = props.features?.legacyProductImportEnabled !== false;
+
     return (
         <Sidebar collapsible="icon" variant="sidebar">
             <SidebarHeader className="border-sidebar-border border-b py-2">
@@ -26,7 +30,7 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent className="py-3">
-                <NavMain items={mainNavItems} />
+                <NavMain items={mainNavItems.filter((item) => legacyImportEnabled || item.url !== '/legacy-imports')} />
             </SidebarContent>
             <SidebarFooter className="border-sidebar-border border-t">
                 <NavUser />

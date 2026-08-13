@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\LegacyImportController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RetailDashboardController;
@@ -39,6 +40,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
     Route::post('customers/{customer}/payments', [CustomerController::class, 'payment'])->name('customers.payments.store');
+
+    if (config('legacy-product-import.enabled', true)) {
+        Route::get('legacy-imports', [LegacyImportController::class, 'index'])->name('legacy-imports.index');
+        Route::post('legacy-imports/preview', [LegacyImportController::class, 'preview'])->name('legacy-imports.preview');
+        Route::post('legacy-imports/execute', [LegacyImportController::class, 'execute'])->name('legacy-imports.execute');
+    }
 });
 
 require __DIR__.'/settings.php';

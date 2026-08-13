@@ -154,6 +154,7 @@ Các hạng mục P1 có thể bắt đầu sớm nếu không làm phân tán n
 
 ### Rehearsal
 
+- chạy exporter source cũ và importer source mới theo contract versioned, dry-run và checksum trong [07-ke-hoach-export-import-du-lieu-legacy.md](07-ke-hoach-export-import-du-lieu-legacy.md);
 - ETL full từ backup MySQL legacy vào MySQL staging sạch;
 - copy/reconcile product image vào storage persistent;
 - xuất counts, exception và reconciliation report;

@@ -25,6 +25,7 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    features?: { legacyProductImportEnabled?: boolean };
     [key: string]: unknown;
 }
 

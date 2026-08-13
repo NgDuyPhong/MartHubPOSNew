@@ -38,6 +38,7 @@ Không bắt buộc giữ role hay giao diện mặc định của starter kit. 
 4. [04-kien-truc-va-du-lieu.md](migration/04-kien-truc-va-du-lieu.md): kiến trúc đích, ranh giới nghiệp vụ và migration dữ liệu.
 5. [05-ke-hoach-trien-khai.md](migration/05-ke-hoach-trien-khai.md): kế hoạch theo milestone, dependency và Definition of Done.
 6. [06-trang-thai-trien-khai.md](migration/06-trang-thai-trien-khai.md): phần đã code, kiểm tra đã chạy và các gate còn thiếu trước cutover.
+7. [07-ke-hoach-export-import-du-lieu-legacy.md](migration/07-ke-hoach-export-import-du-lieu-legacy.md): contract và kế hoạch triển khai chức năng export nhanh ở source cũ, import nhanh ở source mới và đối soát cutover.
 
 ## Thứ tự ưu tiên tổng quát
 
