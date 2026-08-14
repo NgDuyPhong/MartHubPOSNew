@@ -1,5 +1,5 @@
 import { type NavItem } from '@/types';
-import { Boxes, ClipboardList, Database, FileText, Gauge, PackagePlus, ShoppingCart, Users, WalletCards } from 'lucide-react';
+import { Boxes, ClipboardList, Database, FileText, FolderTree, Gauge, PackagePlus, Ruler, ShoppingCart, Users, WalletCards } from 'lucide-react';
 
 /** Primary navigation shared by the authenticated POS shell. */
 export const mainNavItems: NavItem[] = [
@@ -7,6 +7,8 @@ export const mainNavItems: NavItem[] = [
     { title: 'Tổng quan', url: '/dashboard', icon: Gauge },
     { title: 'Hóa đơn', url: '/sales', icon: FileText },
     { title: 'Sản phẩm', url: '/products', icon: Boxes },
+    { title: 'Danh mục', url: '/categories', icon: FolderTree },
+    { title: 'Đơn vị', url: '/units', icon: Ruler },
     { title: 'Nhập kho', url: '/stock-receipts', icon: PackagePlus },
     { title: 'Tồn kho', url: '/inventory', icon: ClipboardList },
     { title: 'Khách & nợ', url: '/customers', icon: Users },

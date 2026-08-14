@@ -2,7 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatMoney } from '@/lib/format';
+import { normalizeVietnamese } from '@/lib/vietnamese-search';
 import { Banknote, QrCode, UserRound } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { Customer } from '../model/types';
 
 export function CartSummary({
@@ -64,6 +66,14 @@ export function CartSummary({
     onOwnerPinChange: (value: string) => void;
     onCheckout: () => void;
 }) {
+    const selectedCustomer = customers.find((customer) => customer.id === customerId);
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+    const filteredCustomers = useMemo(() => {
+        const needle = normalizeVietnamese(customerSearch);
+        return customers.filter((customer) => !needle || normalizeVietnamese(`${customer.code} ${customer.name} ${customer.phone ?? ''}`).includes(needle)).slice(0, 30);
+    }, [customerSearch, customers]);
+
     return (
         <div ref={checkoutRef} className="border-t bg-slate-50 p-4">
             <div className="mb-3 grid grid-cols-3 gap-4 text-sm">
@@ -146,19 +156,32 @@ export function CartSummary({
                                     <UserRound className="mr-1 inline size-4" />
                                     Khách hàng {debt > 0 && '*'}
                                 </Label>
-                                <select
-                                    value={customerId ?? ''}
-                                    onChange={(event) => onCustomerChange(event.target.value ? Number(event.target.value) : null)}
-                                    className="mt-1 h-10 w-full rounded-md border bg-white px-3"
-                                >
-                                    <option value="">Khách lẻ</option>
-                                    {customers.map((customer) => (
-                                        <option key={customer.id} value={customer.id}>
-                                            {customer.name}
-                                            {customer.phone ? ` · ${customer.phone}` : ''} · Nợ {formatMoney(customer.balance)}đ
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="relative mt-1">
+                                    <Input
+                                        role="combobox"
+                                        aria-expanded={customerPickerOpen}
+                                        aria-controls="pos-customer-options"
+                                        value={selectedCustomer ? `${selectedCustomer.name}${selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}` : customerSearch}
+                                        placeholder="Khách lẻ hoặc tìm khách hàng…"
+                                        onFocus={() => setCustomerPickerOpen(true)}
+                                        onChange={(event) => {
+                                            setCustomerSearch(event.target.value);
+                                            setCustomerPickerOpen(true);
+                                            if (customerId !== null) onCustomerChange(null);
+                                        }}
+                                    />
+                                    {customerPickerOpen && (
+                                        <div id="pos-customer-options" role="listbox" className="bg-popover absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border p-1 shadow-lg">
+                                            <button type="button" className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm" onClick={() => { onCustomerChange(null); setCustomerSearch(''); setCustomerPickerOpen(false); }}>Khách lẻ</button>
+                                            {filteredCustomers.map((customer) => (
+                                                <button type="button" role="option" aria-selected={customer.id === customerId} key={customer.id} className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm" onClick={() => { onCustomerChange(customer.id); setCustomerSearch(''); setCustomerPickerOpen(false); }}>
+                                                    <span className="font-medium">{customer.name}</span>
+                                                    <span className="text-muted-foreground ml-2 text-xs">{customer.code}{customer.phone ? ` · ${customer.phone}` : ''} · Nợ {formatMoney(customer.balance)}đ</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             {overrideNeeded && (
                                 <div>

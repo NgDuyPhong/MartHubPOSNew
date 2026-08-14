@@ -19,6 +19,7 @@ export type Product = {
     track_lot: boolean;
     track_expiry: boolean;
     is_active: boolean;
+    updated_at?: string;
     category?: { name: string };
     variants: Array<{
         last_cost_base: number;

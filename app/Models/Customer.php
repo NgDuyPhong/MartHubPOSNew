@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\VietnameseSearch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,6 +13,13 @@ class Customer extends Model
     protected function casts(): array
     {
         return ['credit_limit' => 'integer', 'default_due_date' => 'date', 'is_active' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $customer): void {
+            $customer->search_text = VietnameseSearch::combine($customer->name, $customer->code, $customer->phone);
+        });
     }
 
     public function creditEntries(): HasMany

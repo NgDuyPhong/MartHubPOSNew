@@ -1,3 +1,4 @@
+import { ProductQuickEditSheet } from '@/features/products';
 import {
     filterCatalogWithIndex,
     findBarcodeMatchWithIndex,
@@ -16,7 +17,7 @@ import {
 import { CartSummary, CartTable, CatalogPanel, OpenShiftDialog, PosStatusBar, ReceiptPreview, SaleSuccessBar } from '@/features/pos/components';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 type PosProps = {
     catalog: Product[];
@@ -25,20 +26,24 @@ type PosProps = {
     activeShift: Shift | null;
     registers: Array<{ id: number; name: string }>;
     expiryAlerts: number;
+    canManageCatalog: boolean;
 };
 
-export default function PosPage({ catalog, categories, customers, activeShift, registers, expiryAlerts }: PosProps) {
+export default function PosPage({ catalog, categories, customers, activeShift, registers, expiryAlerts, canManageCatalog }: PosProps) {
     const [query, setQuery] = useState('');
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
     const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [openShiftOpen, setOpenShiftOpen] = useState(!activeShift);
+    const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+    const [quickEditUnitId, setQuickEditUnitId] = useState<number | undefined>();
     const searchRef = useRef<HTMLInputElement>(null);
     const checkoutRef = useRef<HTMLDivElement>(null);
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
     const openShiftForm = useForm({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
     const { cart, selectedKey, addLine, updateLine, removeLine, clearCart, selectLine } = usePosCart();
+    const hasStaleCartPrice = useMemo(() => cart.some((line) => catalog.find((item) => item.id === line.product.id)?.variants.flatMap((variant) => variant.units).find((unit) => unit.id === line.productUnit.id)?.sale_price !== line.productUnit.sale_price), [cart, catalog]);
     const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(catalog, query, categoryId);
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
     const { online, pendingCount, refreshPending } = useConnectivity(catalog, onSync);
@@ -66,6 +71,14 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
             searchRef.current?.focus();
         },
         [addLine],
+    );
+    const openQuickEdit = useCallback(
+        (product: Product, unit?: ProductUnit) => {
+            if (!canManageCatalog) return;
+            setQuickEditProduct(product);
+            setQuickEditUnitId(unit?.id);
+        },
+        [canManageCatalog],
     );
 
     const handleSearchKey = useCallback(
@@ -103,7 +116,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
     return (
         <AppLayout breadcrumbs={[{ title: 'Bán hàng', href: '/pos' }]}>
             <Head title="Bán hàng" />
-            <div className="flex min-h-0 flex-1 flex-col bg-slate-100 p-3 lg:h-[calc(100vh-4rem)]">
+            <div className="bg-muted/30 flex min-h-0 flex-1 flex-col p-3 lg:h-[calc(100vh-4rem)]">
                 <PosStatusBar online={online} pendingCount={pendingCount} activeShift={activeShift} expiryAlerts={expiryAlerts} />
                 {message && (
                     <button
@@ -112,6 +125,11 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                     >
                         {message}
                     </button>
+                )}
+                {hasStaleCartPrice && (
+                    <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+                        Giá catalog đã thay đổi; dòng hàng đang có trong giỏ vẫn giữ giá cũ. Sản phẩm thêm mới sẽ dùng giá hiện tại.
+                    </div>
                 )}
                 <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
@@ -126,8 +144,10 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                         onCategoryChange={setCategoryId}
                         onSearchKey={handleSearchKey}
                         onAdd={addUnit}
+                        canManageCatalog={canManageCatalog}
+                        onQuickEdit={openQuickEdit}
                     />
-                    <section className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border bg-white shadow-sm lg:col-span-3">
+                    <section className="bg-card flex min-h-[480px] flex-col overflow-hidden rounded-lg border shadow-sm lg:col-span-3">
                         <CartTable
                             cart={cart}
                             selectedKey={selectedKey}
@@ -160,6 +180,20 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
             <OpenShiftDialog open={openShiftOpen} onOpenChange={setOpenShiftOpen} registers={registers} form={openShiftForm} searchRef={searchRef} />
             {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} />}
             <ReceiptPreview receipt={receipt} open={receiptPreviewOpen} onOpenChange={setReceiptPreviewOpen} />
+            <ProductQuickEditSheet
+                product={quickEditProduct}
+                unitId={quickEditUnitId}
+                categories={categories}
+                open={Boolean(quickEditProduct)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setQuickEditProduct(null);
+                        setQuickEditUnitId(undefined);
+                        searchRef.current?.focus();
+                    }
+                }}
+                online={online}
+            />
         </AppLayout>
     );
 }

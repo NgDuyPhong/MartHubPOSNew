@@ -11,17 +11,19 @@ export function CustomerFormDialog({
     onOpenChange,
     form,
     onSubmit,
+    editing,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     form: InertiaFormProps<CustomerFormData>;
     onSubmit: (event: React.FormEvent) => void;
+    editing?: boolean;
 }) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Thêm khách hàng</DialogTitle>
+                    <DialogTitle>{editing ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle>
                     <DialogDescription>Tên là bắt buộc để nhận diện công nợ; số điện thoại có thể để trống.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={onSubmit} className="space-y-3">
@@ -44,7 +46,7 @@ export function CustomerFormDialog({
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Lưu khách hàng
+                            {editing ? 'Cập nhật khách hàng' : 'Lưu khách hàng'}
                         </Button>
                     </DialogFooter>
                 </form>

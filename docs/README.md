@@ -40,6 +40,12 @@ Không bắt buộc giữ role hay giao diện mặc định của starter kit. 
 6. [06-trang-thai-trien-khai.md](migration/06-trang-thai-trien-khai.md): phần đã code, kiểm tra đã chạy và các gate còn thiếu trước cutover.
 7. [07-ke-hoach-export-import-du-lieu-legacy.md](migration/07-ke-hoach-export-import-du-lieu-legacy.md): contract và kế hoạch triển khai chức năng export nhanh ở source cũ, import nhanh ở source mới và đối soát cutover.
 
+## Kế hoạch chuyên đề
+
+- [PLAN-NANG-CAP-UX-TOAN-DIEN.md](PLAN-NANG-CAP-UX-TOAN-DIEN.md): audit và roadmap UX toàn hệ thống, gồm search/filter/pagination cho các collection và sửa nhanh sản phẩm từ màn POS.
+- [PLAN-TOI-UU-POS-CATALOG-SEARCH.md](PLAN-TOI-UU-POS-CATALOG-SEARCH.md): tối ưu riêng cho search, barcode và rendering catalog POS.
+- [PLAN-REFACTOR-FRONTEND.md](PLAN-REFACTOR-FRONTEND.md): kiến trúc feature, dependency boundary và lộ trình refactor frontend.
+
 ## Thứ tự ưu tiên tổng quát
 
 ```text

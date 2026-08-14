@@ -7,13 +7,13 @@ export function StockReceiptHistory({
     receipts: Array<{ id: number; receipt_number: string; source: string; supplier_name?: string; items_count: number; received_at: string }>;
 }) {
     return (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
             <div className="flex items-center gap-2 border-b px-4 py-3 font-semibold">
                 <FileSpreadsheet className="size-4" />
                 Lịch sử nhập kho
             </div>
-            <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
+                <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
                     <tr>
                         <th className="px-4 py-2">Mã phiếu</th>
                         <th className="px-4 py-2">Thời gian</th>
@@ -33,7 +33,7 @@ export function StockReceiptHistory({
                         </tr>
                     ))}
                 </tbody>
-            </table>
+            </table></div>
         </div>
     );
 }

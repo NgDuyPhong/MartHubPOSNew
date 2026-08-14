@@ -1,4 +1,5 @@
 import type { CartLine, CartTotals, Product } from './types';
+import { normalizeVietnamese } from '@/lib/vietnamese-search';
 
 export type BarcodeMatch = { product: Product; variant: CartLine['variant']; unit: CartLine['productUnit'] };
 
@@ -8,7 +9,7 @@ export type CatalogSearchIndex = {
     barcodeMatches: Map<string, BarcodeMatch>;
 };
 
-function normalizeSearchText(value: string): string {
+function normalizeBarcode(value: string): string {
     return value.trim().toLowerCase();
 }
 
@@ -18,7 +19,7 @@ export function buildCatalogSearchIndex(catalog: Product[]): CatalogSearchIndex 
         const barcodes = product.variants.flatMap((variant) =>
             variant.units.flatMap((unit) =>
                 unit.barcodes.map((barcode) => {
-                    const value = normalizeSearchText(barcode.value);
+                    const value = normalizeBarcode(barcode.value);
                     const match = { product, variant, unit };
 
                     if (value && !barcodeMatches.has(value)) {
@@ -32,7 +33,7 @@ export function buildCatalogSearchIndex(catalog: Product[]): CatalogSearchIndex 
 
         return {
             product,
-            searchableText: [product.name, product.sku, ...barcodes].map(normalizeSearchText).join(' '),
+            searchableText: [product.name, product.sku, ...barcodes].map(normalizeVietnamese).join(' '),
         };
     });
 
@@ -40,7 +41,7 @@ export function buildCatalogSearchIndex(catalog: Product[]): CatalogSearchIndex 
 }
 
 export function filterCatalogWithIndex(index: CatalogSearchIndex, query: string, categoryId: number | null): Product[] {
-    const normalizedQuery = normalizeSearchText(query);
+    const normalizedQuery = normalizeVietnamese(query);
 
     return index.records
         .filter(({ product, searchableText }) => {
@@ -82,5 +83,5 @@ export function findBarcodeMatch(catalog: Product[], barcode: string): BarcodeMa
 }
 
 export function findBarcodeMatchWithIndex(index: CatalogSearchIndex, barcode: string): BarcodeMatch | null {
-    return index.barcodeMatches.get(normalizeSearchText(barcode)) ?? null;
+    return index.barcodeMatches.get(normalizeBarcode(barcode)) ?? null;
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LegacyImportController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockReceiptController;
+use App\Http\Controllers\UnitController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'))->name('home');
@@ -21,6 +23,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
     Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::patch('products/{product}/quick-update', [ProductController::class, 'quickUpdate'])->name('products.quick-update');
+    Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+    Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::get('units', [UnitController::class, 'index'])->name('units.index');
+    Route::post('units', [UnitController::class, 'store'])->name('units.store');
+    Route::put('units/{unit}', [UnitController::class, 'update'])->name('units.update');
+    Route::delete('units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
     Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('stock-receipts', [StockReceiptController::class, 'index'])->name('stock-receipts.index');
@@ -39,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+    Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
     Route::post('customers/{customer}/payments', [CustomerController::class, 'payment'])->name('customers.payments.store');
 
     if (config('legacy-product-import.enabled', true)) {

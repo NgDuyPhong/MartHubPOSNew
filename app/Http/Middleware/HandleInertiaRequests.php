@@ -56,6 +56,9 @@ class HandleInertiaRequests extends Middleware
             'features' => [
                 'legacyProductImportEnabled' => $legacyImportEnabled,
             ],
+            'ui' => [
+                'pagination' => config('ux.pagination'),
+            ],
         ];
     }
 }

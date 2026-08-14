@@ -44,7 +44,7 @@ export default function Dashboard({
                 </div>
                 <div className="grid gap-4 xl:grid-cols-3">
                     <div className="overflow-hidden rounded-lg border bg-white shadow-sm xl:col-span-2">
-                        <div className="border-b px-4 py-3 font-semibold">Hóa đơn gần đây</div>
+                        <div className="flex items-center justify-between border-b px-4 py-3"><span className="font-semibold">Hóa đơn gần đây</span><Link href="/sales" className="text-primary text-sm font-medium">Xem tất cả</Link></div>
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
                                 <tr>

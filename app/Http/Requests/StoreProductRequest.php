@@ -10,7 +10,7 @@ class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true && in_array($this->user()?->role, ['owner', 'manager'], true);
+        return $this->user()?->canManageCatalog() === true;
     }
 
     public function rules(): array

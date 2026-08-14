@@ -86,6 +86,10 @@ export function ProductFormDialog({
                             />
                             Theo dõi hạn sử dụng
                         </label>
+                        <label>
+                            <input type="checkbox" className="mr-2" checked={form.data.is_active} onChange={(event) => form.setData('is_active', event.target.checked)} />
+                            Đang bán
+                        </label>
                     </div>
                     <ProductUnitsEditor form={form} units={units} firstUnit={firstUnit} updateUnit={updateUnit} chooseExclusive={chooseExclusive} />
                     <DialogFooter>

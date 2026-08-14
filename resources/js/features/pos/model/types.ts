@@ -15,6 +15,7 @@ export type Product = {
     name: string;
     image_path?: string;
     category_id: number | null;
+    updated_at?: string;
     category?: { name: string; color?: string };
     variants: Variant[];
 };

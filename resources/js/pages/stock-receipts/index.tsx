@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { Pagination, SearchField } from '@/components/shared';
+import { useListQuery } from '@/hooks/use-list-query';
 import {
     StockReceiptForm,
     StockReceiptHistory,
@@ -12,12 +14,14 @@ import {
 } from '@/features/stock-receipts';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
+import type { Paginated } from '@/types/pagination';
 import { PackagePlus, Upload } from 'lucide-react';
 import { FormEvent, useRef, useState } from 'react';
 
 type Receipt = { id: number; receipt_number: string; source: string; supplier_name?: string; items_count: number; received_at: string };
 
-export default function StockReceiptsPage({ receipts, productUnits }: { receipts: { data: Receipt[] }; productUnits: ProductUnit[] }) {
+export default function StockReceiptsPage({ receipts, productUnits, filters }: { receipts: Paginated<Receipt>; productUnits: ProductUnit[]; filters: { search: string; per_page: number } }) {
+    const { query, update } = useListQuery(route('stock-receipts.index'), { ...filters, page: 1 });
     const [showForm, setShowForm] = useState(false);
     const [importMessage, setImportMessage] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
@@ -95,6 +99,9 @@ export default function StockReceiptsPage({ receipts, productUnits }: { receipts
                     </div>
                 </div>
                 {importMessage && <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">{importMessage}</div>}
+                <div className="flex rounded-lg border bg-card p-3 shadow-sm">
+                    <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm mã phiếu hoặc nhà cung cấp…" />
+                </div>
                 {showForm && (
                     <StockReceiptForm
                         form={form}
@@ -106,6 +113,7 @@ export default function StockReceiptsPage({ receipts, productUnits }: { receipts
                     />
                 )}
                 <StockReceiptHistory receipts={receipts.data} />
+                <div className="bg-card overflow-hidden rounded-lg border shadow-sm"><Pagination paginator={receipts} routeUrl={route('stock-receipts.index')} query={query} /></div>
             </div>
         </AppLayout>
     );

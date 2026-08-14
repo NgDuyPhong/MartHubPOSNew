@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { CollectionState, Pagination, SearchField } from '@/components/shared';
 import {
     ProductFormDialog,
     ProductTable,
@@ -13,15 +14,31 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { FormEvent, useState } from 'react';
+import { useListQuery } from '@/hooks/use-list-query';
+import type { Paginated } from '@/types/pagination';
+
+type ProductFilters = {
+    search: string;
+    category_id: number | null;
+    status: string;
+    sort: string;
+    direction: string;
+    per_page: number;
+    page: number;
+};
 
 export default function ProductsPage({
     products,
     categories,
     units,
+    filters,
+    canManageCatalog,
 }: {
-    products: { data: Product[] };
+    products: Paginated<Product>;
     categories: Array<{ id: number; name: string }>;
     units: Unit[];
+    filters: Omit<ProductFilters, 'page'>;
+    canManageCatalog: boolean;
 }) {
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -37,6 +54,7 @@ export default function ProductsPage({
         units: [{ unit_id: firstUnit, conversion_to_base: 1, sale_price: 0, barcode: '', is_base: true, is_default_sale: true }],
     });
     const form = useForm<ProductFormData>(initialData());
+    const { query, update, reset } = useListQuery<ProductFilters>(route('products.index'), { ...filters, page: 1 });
     const submit = (event: FormEvent) => {
         event.preventDefault();
         if (!hasValidBaseUnit(form.data.units)) {
@@ -108,15 +126,50 @@ export default function ProductsPage({
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold">Sản phẩm & đơn vị bán</h1>
-                        <p className="text-sm text-slate-500">Tồn kho luôn lưu theo đơn vị cơ sở; barcode gắn với từng quy cách.</p>
+                        <h1 className="text-2xl font-semibold">Sản phẩm & đơn vị bán</h1>
+                        <p className="text-muted-foreground text-sm">Tồn kho luôn lưu theo đơn vị cơ sở; barcode gắn với từng quy cách.</p>
                     </div>
-                    <Button onClick={addProduct}>
-                        <Plus className="mr-2 size-4" />
-                        Thêm sản phẩm
-                    </Button>
+                    {canManageCatalog && (
+                        <Button onClick={addProduct}>
+                            <Plus className="mr-2 size-4" />
+                            Thêm sản phẩm
+                        </Button>
+                    )}
                 </div>
-                <ProductTable products={products.data} onEdit={editProduct} />
+                <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 shadow-sm md:flex-row md:items-center">
+                    <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên, SKU hoặc barcode…" />
+                    <select
+                        className="bg-background h-10 rounded-md border px-3 text-sm"
+                        value={query.category_id ?? ''}
+                        onChange={(event) => update('category_id', event.target.value ? Number(event.target.value) : null)}
+                        aria-label="Lọc theo danh mục"
+                    >
+                        <option value="">Tất cả danh mục</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        className="bg-background h-10 rounded-md border px-3 text-sm"
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc trạng thái"
+                    >
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang bán</option>
+                        <option value="inactive">Ngừng bán</option>
+                    </select>
+                </div>
+                <div className="flex flex-wrap gap-2 rounded-lg border bg-card p-3 shadow-sm">
+                    <select className="bg-background h-10 rounded-md border px-3 text-sm" value={query.sort} onChange={(event) => update('sort', event.target.value)} aria-label="Sắp xếp sản phẩm"><option value="latest">Mới tạo</option><option value="name">Tên A-Z</option><option value="sku">SKU</option></select>
+                </div>
+                <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
+                    <ProductTable products={products.data} onEdit={editProduct} canManageCatalog={canManageCatalog} />
+                    <CollectionState isEmpty={!products.data.length} hasFilters={Boolean(query.search || query.category_id || query.status !== 'all' || query.sort !== 'latest')} onReset={reset} label="sản phẩm" />
+                    <Pagination paginator={products} routeUrl={route('products.index')} query={query} />
+                </div>
             </div>
             <ProductFormDialog
                 open={open}
@@ -125,7 +178,7 @@ export default function ProductsPage({
                 categories={categories}
                 units={units}
                 firstUnit={firstUnit}
-                onOpenChange={setOpen}
+                onOpenChange={(value) => { setOpen(value); if (!value) { setEditingId(null); form.clearErrors(); } }}
                 onSubmit={submit}
                 updateUnit={updateUnit}
                 chooseExclusive={chooseExclusive}

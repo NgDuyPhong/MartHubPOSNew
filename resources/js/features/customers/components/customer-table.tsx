@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { formatMoney } from '@/lib/format';
-import { Banknote, Users } from 'lucide-react';
+import { Banknote, Pencil } from 'lucide-react';
 import { canReceiveDebt, customerBalance } from '../model/selectors';
 import type { Customer } from '../model/types';
 
@@ -8,15 +8,17 @@ export function CustomerTable({
     customers,
     activeShift,
     onReceiveDebt,
+    onEdit,
 }: {
     customers: Customer[];
     activeShift: boolean;
     onReceiveDebt: (customer: Customer, balance: number) => void;
+    onEdit: (customer: Customer) => void;
 }) {
     return (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-            <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+        <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
                     <tr>
                         <th className="px-4 py-3">Mã</th>
                         <th className="px-4 py-3">Khách hàng</th>
@@ -39,24 +41,11 @@ export function CustomerTable({
                                     {formatMoney(balance)}đ
                                 </td>
                                 <td className="px-4 text-right">
-                                    {canReceiveDebt(customer) && (
-                                        <Button size="sm" variant="outline" disabled={!activeShift} onClick={() => onReceiveDebt(customer, balance)}>
-                                            <Banknote className="mr-1 size-3" />
-                                            Thu nợ
-                                        </Button>
-                                    )}
+                                    <div className="flex justify-end gap-1">{canReceiveDebt(customer) && <Button size="sm" variant="outline" disabled={!activeShift} onClick={() => onReceiveDebt(customer, balance)}><Banknote className="mr-1 size-3" />Thu nợ</Button>}<Button size="sm" variant="ghost" onClick={() => onEdit(customer)}><Pencil className="mr-1 size-3" />Sửa</Button></div>
                                 </td>
                             </tr>
                         );
                     })}
-                    {!customers.length && (
-                        <tr>
-                            <td colSpan={6} className="py-20 text-center text-slate-400">
-                                <Users className="mx-auto mb-2 size-10" />
-                                Chưa có khách hàng
-                            </td>
-                        </tr>
-                    )}
                 </tbody>
             </table>
         </div>

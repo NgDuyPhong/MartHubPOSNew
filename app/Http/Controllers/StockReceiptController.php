@@ -16,9 +16,13 @@ class StockReceiptController extends Controller
 {
     public function index(Request $request): Response
     {
+        $search = trim((string) $request->string('search'));
+        $perPage = in_array($request->integer('per_page'), config('ux.pagination.options'), true) ? $request->integer('per_page') : config('ux.pagination.default');
+
         return Inertia::render('stock-receipts/index', [
-            'receipts' => StockReceipt::query()->where('branch_id', $request->user()->branch_id)->withCount('items')->latest('received_at')->paginate(30),
+            'receipts' => StockReceipt::query()->where('branch_id', $request->user()->branch_id)->withCount('items')->when($search !== '', fn ($query) => $query->where(fn ($searchQuery) => $searchQuery->where('receipt_number', 'like', "%{$search}%")->orWhere('supplier_name', 'like', "%{$search}%")))->latest('received_at')->paginate($perPage)->withQueryString(),
             'productUnits' => ProductUnit::query()->whereHas('variant.product', fn ($query) => $query->where('organization_id', $request->user()->organization_id))->with(['variant.product:id,name,sku,track_lot,track_expiry', 'unit:id,code,name', 'barcodes:id,product_unit_id,value'])->get(),
+            'filters' => ['search' => $search, 'per_page' => $perPage],
         ]);
     }
 

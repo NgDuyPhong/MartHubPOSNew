@@ -64,4 +64,21 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Organization::class);
     }
+
+    /**
+     * Capability bridge kept small until the permission model is persisted.
+     * All catalog mutations use this method so the UI and server share one contract.
+     */
+    public function hasCapability(string $capability): bool
+    {
+        return match ($capability) {
+            'catalog.manage' => $this->is_active && in_array($this->role, ['owner', 'manager'], true),
+            default => false,
+        };
+    }
+
+    public function canManageCatalog(): bool
+    {
+        return $this->hasCapability('catalog.manage');
+    }
 }
