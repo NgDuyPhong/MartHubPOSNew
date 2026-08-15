@@ -28,14 +28,36 @@ createInertiaApp({
 // This will set light / dark mode on load...
 initializeTheme();
 
-if (import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-        if (!('serviceWorker' in navigator)) {
-            return;
-        }
+async function retirePosServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
 
-        void navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
-            console.error('MartHub POS service worker registration failed.', error);
-        });
+        await Promise.all(
+            registrations
+                .filter((registration) =>
+                    [registration.installing, registration.waiting, registration.active].some((worker) => {
+                        if (!worker) {
+                            return false;
+                        }
+
+                        const scriptUrl = new URL(worker.scriptURL);
+
+                        return scriptUrl.origin === window.location.origin && scriptUrl.pathname === '/sw.js';
+                    }),
+                )
+                .map((registration) => registration.unregister()),
+        );
+    }
+
+    if ('caches' in window) {
+        const cacheNames = await window.caches.keys();
+
+        await Promise.all(cacheNames.filter((cacheName) => cacheName.startsWith('marthub-pos-')).map((cacheName) => window.caches.delete(cacheName)));
+    }
+}
+
+if (import.meta.env.PROD) {
+    void retirePosServiceWorker().catch((error) => {
+        console.error('MartHub POS service worker cleanup failed.', error);
     });
 }
