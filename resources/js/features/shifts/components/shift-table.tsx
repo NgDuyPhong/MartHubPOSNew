@@ -8,10 +8,12 @@ export function ShiftTable({
     shifts,
     onCashMovement,
     onClose,
+    onReconcile,
 }: {
     shifts: Shift[];
     onCashMovement: (id: number) => void;
     onClose: (id: number) => void;
+    onReconcile: (id: number) => void;
 }) {
     return (
         <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
@@ -51,6 +53,7 @@ export function ShiftTable({
                                 )}
                             </td>
                             <td className="px-4">
+                                {shift.needs_reconciliation && <Badge className="bg-amber-100 text-amber-900">Cần đối soát</Badge>}
                                 {shift.status === 'open' ? (
                                     <Badge className="bg-emerald-100 text-emerald-800">Đang mở</Badge>
                                 ) : (
@@ -70,6 +73,11 @@ export function ShiftTable({
                                                 Chốt ca
                                             </Button>
                                         </>
+                                    )}
+                                    {shift.needs_reconciliation && (
+                                        <Button size="sm" variant="outline" onClick={() => onReconcile(shift.id)}>
+                                            Đối soát
+                                        </Button>
                                     )}
                                 </div>
                             </td>

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { CartLine } from '../model/types';
 
 export function CartTable({
@@ -26,22 +27,32 @@ export function CartTable({
             <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
                     <h2 className="font-semibold">Hóa đơn hiện tại</h2>
-                    <p className="text-xs text-slate-500">{cart.length} dòng sản phẩm</p>
+                    <p className="text-muted-foreground text-xs">{cart.length} dòng sản phẩm</p>
                 </div>
                 <Button variant="ghost" size="sm" disabled={!cart.length} onClick={onClear}>
                     <Trash2 className="mr-1 size-4" />
                     Xóa giỏ
                 </Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-                <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-50 text-left text-xs text-slate-500 uppercase">
+            <div className="min-h-0 flex-1 overflow-auto">
+                <table className="w-full min-w-[680px] text-sm" aria-label="Các dòng hàng trong hóa đơn hiện tại">
+                    <thead className="bg-muted text-muted-foreground sticky top-0 text-left text-xs uppercase">
                         <tr>
-                            <th className="px-3 py-2">Sản phẩm</th>
-                            <th className="w-28 px-2 py-2">SL</th>
-                            <th className="w-32 px-2 py-2">Đơn giá</th>
-                            <th className="w-28 px-2 py-2">Giảm</th>
-                            <th className="w-28 px-3 py-2 text-right">Thành tiền</th>
+                            <th scope="col" className="px-3 py-2">
+                                Sản phẩm
+                            </th>
+                            <th scope="col" className="w-28 px-2 py-2">
+                                SL
+                            </th>
+                            <th scope="col" className="w-32 px-2 py-2">
+                                Đơn giá
+                            </th>
+                            <th scope="col" className="w-28 px-2 py-2">
+                                Giảm
+                            </th>
+                            <th scope="col" className="w-28 px-3 py-2 text-right">
+                                Thành tiền
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,49 +60,32 @@ export function CartTable({
                             <tr
                                 key={line.key}
                                 onClick={() => onSelect(line.key)}
-                                className={`border-t ${selectedKey === line.key ? 'bg-blue-50' : ''}`}
+                                tabIndex={0}
+                                aria-selected={selectedKey === line.key}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        onSelect(line.key);
+                                    }
+                                }}
+                                className={`focus-visible:ring-ring border-t focus-visible:ring-2 ${selectedKey === line.key ? 'bg-accent' : ''}`}
                             >
                                 <td className="px-3 py-2">
                                     <div className="font-medium">{line.product.name}</div>
-                                    <div className="text-xs text-slate-500">
+                                    <div className="text-muted-foreground text-xs">
                                         {line.productUnit.unit.name} · 1 {line.productUnit.unit.code} = {Number(line.productUnit.conversion_to_base)}{' '}
                                         đơn vị gốc
                                     </div>
                                 </td>
                                 <td className="px-2 py-2">
-                                    <div className="flex items-center">
-                                        <Button
-                                            size="icon"
-                                            variant="outline"
-                                            className="size-7"
-                                            onClick={() =>
-                                                line.quantity <= 1 ? onRemove(line.key) : onUpdate(line.key, { quantity: line.quantity - 1 })
-                                            }
-                                        >
-                                            <Minus className="size-3" />
-                                        </Button>
-                                        <Input
-                                            className="h-7 w-12 rounded-none px-1 text-center"
-                                            type="number"
-                                            min="0.001"
-                                            value={line.quantity}
-                                            onChange={(event) => onUpdate(line.key, { quantity: Math.max(0.001, Number(event.target.value)) })}
-                                        />
-                                        <Button
-                                            size="icon"
-                                            variant="outline"
-                                            className="size-7"
-                                            onClick={() => onUpdate(line.key, { quantity: line.quantity + 1 })}
-                                        >
-                                            <Plus className="size-3" />
-                                        </Button>
-                                    </div>
+                                    <QuantityInput line={line} onUpdate={onUpdate} onRemove={onRemove} />
                                 </td>
                                 <td className="px-2">
                                     <Input
                                         className="h-8 px-2 text-right"
                                         type="number"
                                         value={line.unitPrice}
+                                        aria-label={`Đơn giá ${line.product.name}`}
                                         disabled={!online}
                                         onChange={(event) => onUpdate(line.key, { unitPrice: Math.max(0, Number(event.target.value)) })}
                                     />
@@ -101,6 +95,7 @@ export function CartTable({
                                         className="h-8 px-2 text-right"
                                         type="number"
                                         value={line.discount}
+                                        aria-label={`Giảm giá ${line.product.name}`}
                                         disabled={!online}
                                         onChange={(event) => onUpdate(line.key, { discount: Math.max(0, Number(event.target.value)) })}
                                     />
@@ -110,7 +105,7 @@ export function CartTable({
                         ))}
                         {!cart.length && (
                             <tr>
-                                <td colSpan={5} className="py-20 text-center text-slate-400">
+                                <td colSpan={5} className="text-muted-foreground py-20 text-center">
                                     <ShoppingCart className="mx-auto mb-2 size-10" />
                                     Quét mã hoặc chọn sản phẩm để bắt đầu
                                 </td>
@@ -120,5 +115,92 @@ export function CartTable({
                 </table>
             </div>
         </>
+    );
+}
+
+function QuantityInput({
+    line,
+    onUpdate,
+    onRemove,
+}: {
+    line: CartLine;
+    onUpdate: (key: string, values: Partial<CartLine>) => void;
+    onRemove: (key: string) => void;
+}) {
+    const [draft, setDraft] = useState(String(line.quantity));
+    const [error, setError] = useState<string | null>(null);
+    const allowsFractional = line.productUnit.allows_fractional_quantity;
+
+    useEffect(() => setDraft(String(line.quantity)), [line.quantity]);
+
+    const commit = () => {
+        if (draft.trim() === '') {
+            setDraft(String(line.quantity));
+            setError(null);
+            return;
+        }
+        const quantity = Number(draft);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            setError('Số lượng phải lớn hơn 0.');
+            return;
+        }
+        if (!allowsFractional && !Number.isInteger(quantity)) {
+            setError('Đơn vị đóng gói chỉ nhận số nguyên.');
+            return;
+        }
+        setError(null);
+        onUpdate(line.key, { quantity });
+    };
+
+    return (
+        <div>
+            <div className="flex items-center">
+                <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="size-7"
+                    aria-label={`Giảm số lượng ${line.product.name}`}
+                    onClick={() => (line.quantity <= 1 ? onRemove(line.key) : onUpdate(line.key, { quantity: line.quantity - 1 }))}
+                >
+                    <Minus className="size-3" />
+                </Button>
+                <Input
+                    className="h-7 w-14 rounded-none px-1 text-center"
+                    type="number"
+                    min={allowsFractional ? '0.001' : '1'}
+                    step={allowsFractional ? '0.001' : '1'}
+                    value={draft}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? `${line.key}-quantity-error` : undefined}
+                    onChange={(event) => {
+                        setDraft(event.target.value);
+                        setError(null);
+                    }}
+                    onBlur={commit}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            commit();
+                        }
+                    }}
+                />
+                <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="size-7"
+                    aria-label={`Tăng số lượng ${line.product.name}`}
+                    onClick={() => onUpdate(line.key, { quantity: line.quantity + 1 })}
+                >
+                    <Plus className="size-3" />
+                </Button>
+            </div>
+            {error && (
+                <p id={`${line.key}-quantity-error`} className="text-destructive mt-1 text-[11px] leading-tight">
+                    {error}
+                </p>
+            )}
+        </div>
     );
 }

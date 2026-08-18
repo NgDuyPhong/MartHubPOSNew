@@ -2,9 +2,12 @@ export type SaleItem = {
     id: number;
     product_name: string;
     product_sku: string;
+    variant_name?: string;
     unit_name: string;
+    unit_code?: string;
     quantity: string;
     unit_price: number;
+    original_unit_price?: number;
     discount_amount: number;
     line_total: number;
     price_overridden: boolean;

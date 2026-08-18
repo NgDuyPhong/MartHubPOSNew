@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Customers\CreateCustomerAction;
 use App\Actions\Customers\RecordDebtPaymentAction;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Customer;
 use App\Models\Shift;
 use App\Support\VietnameseSearch;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,15 +38,27 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function store(StoreCustomerRequest $request): RedirectResponse
+    public function store(StoreCustomerRequest $request, CreateCustomerAction $action): RedirectResponse
     {
-        Customer::query()->create(array_merge($request->validated(), [
-            'organization_id' => $request->user()->organization_id,
-            'code' => 'KH-'.str_pad((string) (Customer::query()->where('organization_id', $request->user()->organization_id)->count() + 1), 5, '0', STR_PAD_LEFT),
-            'is_active' => true,
-        ]));
+        $action->execute($request->user(), $request->validated());
 
         return back()->with('success', 'Đã thêm khách hàng.');
+    }
+
+    public function storeQuick(StoreCustomerRequest $request, CreateCustomerAction $action): JsonResponse
+    {
+        $customer = $action->execute($request->user(), $request->validated());
+
+        return response()->json([
+            'customer' => [
+                'id' => $customer->id,
+                'code' => $customer->code,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'balance' => 0,
+            ],
+            'message' => 'Đã thêm khách hàng.',
+        ], 201);
     }
 
     public function update(StoreCustomerRequest $request, Customer $customer): RedirectResponse

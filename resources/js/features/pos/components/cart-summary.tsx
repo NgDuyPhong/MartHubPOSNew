@@ -6,6 +6,7 @@ import { normalizeVietnamese } from '@/lib/vietnamese-search';
 import { Banknote, QrCode, UserRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Customer } from '../model/types';
+import type { CheckoutErrors } from '../model/validation';
 
 export function CartSummary({
     checkoutRef,
@@ -26,12 +27,14 @@ export function CartSummary({
     ownerPin,
     online,
     processing,
+    errors,
     overrideNeeded,
     customers,
     onCashChange,
     onQrChange,
     onQrConfirm,
     onCustomerChange,
+    onQuickCreateCustomer,
     onOwnerPinChange,
     onCheckout,
     searchRef,
@@ -57,12 +60,14 @@ export function CartSummary({
     ownerPin: string;
     online: boolean;
     processing: boolean;
+    errors: CheckoutErrors;
     overrideNeeded: boolean;
     customers: Customer[];
     onCashChange: (value: number) => void;
     onQrChange: (value: number) => void;
     onQrConfirm: (value: boolean) => void;
     onCustomerChange: (value: number | null) => void;
+    onQuickCreateCustomer: () => void;
     onOwnerPinChange: (value: string) => void;
     onCheckout: () => void;
 }) {
@@ -71,36 +76,56 @@ export function CartSummary({
     const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
     const filteredCustomers = useMemo(() => {
         const needle = normalizeVietnamese(customerSearch);
-        return customers.filter((customer) => !needle || normalizeVietnamese(`${customer.code} ${customer.name} ${customer.phone ?? ''}`).includes(needle)).slice(0, 30);
+        return customers
+            .filter((customer) => !needle || normalizeVietnamese(`${customer.code} ${customer.name} ${customer.phone ?? ''}`).includes(needle))
+            .slice(0, 30);
     }, [customerSearch, customers]);
+    const hasValidationErrors = Object.keys(errors).length > 0;
+    const cashDue = Math.max(0, total - qr);
+    const cashSuggestions = useMemo(
+        () =>
+            [...new Set([cashDue, Math.ceil(cashDue / 10000) * 10000, Math.ceil(cashDue / 50000) * 50000])].filter(
+                (amount) => amount > 0 && Number.isFinite(amount),
+            ),
+        [cashDue],
+    );
 
     return (
-        <div ref={checkoutRef} className="border-t bg-slate-50 p-4">
+        <div ref={checkoutRef} className="bg-muted border-t p-4">
             <div className="mb-3 grid grid-cols-3 gap-4 text-sm">
                 <div>
-                    <span className="text-slate-500">Tạm tính</span>
+                    <span className="text-muted-foreground">Tạm tính</span>
                     <div className="font-semibold">{formatMoney(subtotal)}đ</div>
                 </div>
                 <div>
-                    <span className="text-slate-500">Giảm giá</span>
-                    <div className="font-semibold text-orange-600">-{formatMoney(discount)}đ</div>
+                    <span className="text-muted-foreground">Giảm giá</span>
+                    <div className="text-warning font-semibold">-{formatMoney(discount)}đ</div>
                 </div>
                 <div className="text-right">
-                    <span className="text-slate-500">Phải thu</span>
-                    <div className="text-2xl font-bold text-blue-700">{formatMoney(total)}đ</div>
+                    <span className="text-muted-foreground">Phải thu</span>
+                    <div className="text-primary text-2xl font-bold">{formatMoney(total)}đ</div>
                 </div>
             </div>
+            {hasValidationErrors && (
+                <div className="text-destructive border-destructive/30 bg-destructive/10 mb-3 rounded-md border px-3 py-2 text-sm" role="alert">
+                    {Object.values(errors)[0]}
+                </div>
+            )}
             {!expanded ? (
-                <Button className="h-12 w-full bg-blue-600 text-base hover:bg-blue-700" disabled={total <= 0 || !activeShift} onClick={onExpand}>
+                <Button
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-full text-base"
+                    disabled={total <= 0 || !activeShift}
+                    onClick={onExpand}
+                >
                     <Banknote className="mr-2 size-5" />
                     Thanh toán (F12)
                 </Button>
             ) : (
-                <div className="space-y-3 rounded-lg border border-blue-200 bg-white p-3 shadow-sm">
+                <div className="border-primary/30 bg-card space-y-3 rounded-lg border p-3 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="font-semibold">Thanh toán</h3>
-                            <p className="text-xs text-slate-500">Cash, QR hoặc ghi nợ phần còn lại</p>
+                            <p className="text-muted-foreground text-xs">Cash, QR hoặc ghi nợ phần còn lại</p>
                         </div>
                         <Button
                             type="button"
@@ -117,21 +142,45 @@ export function CartSummary({
                     <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-3">
                             <div>
-                                <Label className="flex items-center gap-2">
+                                <Label htmlFor="pos-cash-amount" className="flex items-center gap-2">
                                     <Banknote className="size-4" />
                                     Tiền mặt khách đưa
                                 </Label>
-                                <Input autoFocus type="number" min="0" value={cash} onChange={(event) => onCashChange(Number(event.target.value))} />
+                                <Input
+                                    id="pos-cash-amount"
+                                    autoFocus
+                                    type="number"
+                                    min="0"
+                                    value={cash}
+                                    onChange={(event) => onCashChange(Number(event.target.value))}
+                                />
+                                {cashSuggestions.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1" aria-label="Mệnh giá tiền mặt nhanh">
+                                        {cashSuggestions.map((amount, index) => (
+                                            <Button key={amount} type="button" size="sm" variant="outline" onClick={() => onCashChange(amount)}>
+                                                {index === 0 ? 'Tiền đủ' : formatMoney(amount)}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                )}
+                                {errors.cash && <p className="text-destructive mt-1 text-xs">{errors.cash}</p>}
                             </div>
                             <div>
-                                <Label className="flex items-center gap-2">
+                                <Label htmlFor="pos-qr-amount" className="flex items-center gap-2">
                                     <QrCode className="size-4" />
                                     Chuyển khoản / QR
                                 </Label>
-                                <Input type="number" min="0" value={qr} onChange={(event) => onQrChange(Number(event.target.value))} />
+                                <Input
+                                    id="pos-qr-amount"
+                                    type="number"
+                                    min="0"
+                                    value={qr}
+                                    onChange={(event) => onQrChange(Number(event.target.value))}
+                                />
+                                {errors.qr && <p className="text-destructive mt-1 text-xs">{errors.qr}</p>}
                             </div>
                             {qr > 0 && (
-                                <label className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+                                <label className="bg-warning-muted text-warning-foreground border-warning/40 flex items-start gap-2 rounded-md border p-3 text-sm">
                                     <input
                                         type="checkbox"
                                         className="mt-1"
@@ -142,26 +191,36 @@ export function CartSummary({
                                 </label>
                             )}
                         </div>
-                        <div className="space-y-3 rounded-md bg-slate-50 p-3">
+                        <div className="bg-muted space-y-3 rounded-md p-3">
                             <div className="flex justify-between">
                                 <span>Đã thanh toán</span>
                                 <strong>{formatMoney(paid)}đ</strong>
                             </div>
-                            <div className="flex justify-between text-red-600">
+                            <div className="text-destructive flex justify-between">
                                 <span>Còn ghi nợ</span>
                                 <strong>{formatMoney(debt)}đ</strong>
                             </div>
                             <div>
-                                <Label>
-                                    <UserRound className="mr-1 inline size-4" />
-                                    Khách hàng {debt > 0 && '*'}
-                                </Label>
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label htmlFor="pos-customer">
+                                        <UserRound className="mr-1 inline size-4" />
+                                        Khách hàng {debt > 0 && '*'}
+                                    </Label>
+                                    <Button type="button" size="sm" variant="ghost" onClick={onQuickCreateCustomer} disabled={!online}>
+                                        Tạo nhanh
+                                    </Button>
+                                </div>
                                 <div className="relative mt-1">
                                     <Input
+                                        id="pos-customer"
                                         role="combobox"
                                         aria-expanded={customerPickerOpen}
                                         aria-controls="pos-customer-options"
-                                        value={selectedCustomer ? `${selectedCustomer.name}${selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}` : customerSearch}
+                                        value={
+                                            selectedCustomer
+                                                ? `${selectedCustomer.name}${selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}`
+                                                : customerSearch
+                                        }
                                         placeholder="Khách lẻ hoặc tìm khách hàng…"
                                         onFocus={() => setCustomerPickerOpen(true)}
                                         onChange={(event) => {
@@ -171,22 +230,52 @@ export function CartSummary({
                                         }}
                                     />
                                     {customerPickerOpen && (
-                                        <div id="pos-customer-options" role="listbox" className="bg-popover absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border p-1 shadow-lg">
-                                            <button type="button" className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm" onClick={() => { onCustomerChange(null); setCustomerSearch(''); setCustomerPickerOpen(false); }}>Khách lẻ</button>
+                                        <div
+                                            id="pos-customer-options"
+                                            role="listbox"
+                                            className="bg-popover absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border p-1 shadow-lg"
+                                        >
+                                            <button
+                                                type="button"
+                                                className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm"
+                                                onClick={() => {
+                                                    onCustomerChange(null);
+                                                    setCustomerSearch('');
+                                                    setCustomerPickerOpen(false);
+                                                }}
+                                            >
+                                                Khách lẻ
+                                            </button>
                                             {filteredCustomers.map((customer) => (
-                                                <button type="button" role="option" aria-selected={customer.id === customerId} key={customer.id} className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm" onClick={() => { onCustomerChange(customer.id); setCustomerSearch(''); setCustomerPickerOpen(false); }}>
+                                                <button
+                                                    type="button"
+                                                    role="option"
+                                                    aria-selected={customer.id === customerId}
+                                                    key={customer.id}
+                                                    className="hover:bg-accent w-full rounded px-2 py-2 text-left text-sm"
+                                                    onClick={() => {
+                                                        onCustomerChange(customer.id);
+                                                        setCustomerSearch('');
+                                                        setCustomerPickerOpen(false);
+                                                    }}
+                                                >
                                                     <span className="font-medium">{customer.name}</span>
-                                                    <span className="text-muted-foreground ml-2 text-xs">{customer.code}{customer.phone ? ` · ${customer.phone}` : ''} · Nợ {formatMoney(customer.balance)}đ</span>
+                                                    <span className="text-muted-foreground ml-2 text-xs">
+                                                        {customer.code}
+                                                        {customer.phone ? ` · ${customer.phone}` : ''} · Nợ {formatMoney(customer.balance)}đ
+                                                    </span>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
                                 </div>
+                                {errors.customerId && <p className="text-destructive mt-1 text-xs">{errors.customerId}</p>}
                             </div>
                             {overrideNeeded && (
                                 <div>
-                                    <Label>PIN chủ cửa hàng</Label>
+                                    <Label htmlFor="pos-owner-pin">PIN chủ cửa hàng</Label>
                                     <Input
+                                        id="pos-owner-pin"
                                         type="password"
                                         inputMode="numeric"
                                         value={ownerPin}
@@ -200,11 +289,12 @@ export function CartSummary({
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                         <div className="text-sm">
-                            <span className="text-slate-500">Tiền thừa:</span>{' '}
-                            <strong className="text-emerald-700">{formatMoney(changeAmount)}đ</strong>
-                            <span className="ml-3 text-slate-500">Còn nợ:</span> <strong className="text-red-600">{formatMoney(debt)}đ</strong>
+                            <span className="text-muted-foreground">Tiền thừa:</span>{' '}
+                            <strong className="text-success">{formatMoney(changeAmount)}đ</strong>
+                            <span className="text-muted-foreground ml-3">Còn nợ:</span>{' '}
+                            <strong className="text-destructive">{formatMoney(debt)}đ</strong>
                         </div>
-                        <Button ref={confirmRef} onClick={onCheckout} disabled={processing}>
+                        <Button ref={confirmRef} onClick={onCheckout} disabled={processing || hasValidationErrors}>
                             {processing ? 'Đang lưu...' : online ? 'Xác nhận thanh toán · Enter' : 'Lưu hóa đơn offline'}
                         </Button>
                     </div>

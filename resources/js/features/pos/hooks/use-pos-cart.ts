@@ -30,5 +30,10 @@ export function usePosCart() {
         setSelectedKey(null);
     }, []);
 
-    return { cart, selectedKey, addLine, updateLine, removeLine, clearCart, selectLine: setSelectedKey };
+    const replaceCart = useCallback((nextCart: CartLine[]) => {
+        setCart(nextCart);
+        setSelectedKey(nextCart[0]?.key ?? null);
+    }, []);
+
+    return { cart, selectedKey, addLine, updateLine, removeLine, clearCart, replaceCart, selectLine: setSelectedKey };
 }

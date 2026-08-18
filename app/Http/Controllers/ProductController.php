@@ -130,6 +130,7 @@ class ProductController extends Controller
                     'sale_price' => $unitData['sale_price'],
                     'is_base' => $unitData['is_base'],
                     'is_default_sale' => $unitData['is_default_sale'],
+                    'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
                     'is_active' => true,
                 ]);
                 if ($unitData['barcode'] ?? null) {
@@ -169,6 +170,7 @@ class ProductController extends Controller
                     'sale_price' => $unitData['sale_price'],
                     'is_base' => $unitData['is_base'],
                     'is_default_sale' => $unitData['is_default_sale'],
+                    'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
                     'is_active' => true,
                 ])->save();
                 $keptIds[] = $productUnit->id;

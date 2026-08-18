@@ -34,6 +34,7 @@ class StoreProductRequest extends FormRequest
             'units.*.barcode' => ['nullable', 'string', 'max:100', 'distinct'],
             'units.*.is_base' => ['required', 'boolean'],
             'units.*.is_default_sale' => ['required', 'boolean'],
+            'units.*.allows_fractional_quantity' => ['sometimes', 'boolean'],
         ];
     }
 

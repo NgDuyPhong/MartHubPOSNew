@@ -37,6 +37,18 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-info-muted: var(--info-muted);
+
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-muted: var(--success-muted);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-muted: var(--warning-muted);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
@@ -92,6 +104,15 @@
     --accent-foreground: hsl(0, 0%, 9%);
     --destructive: hsl(0, 84.2%, 60.2%);
     --destructive-foreground: hsl(0, 0%, 98%);
+    --info: hsl(217, 91%, 50%);
+    --info-foreground: hsl(0, 0%, 100%);
+    --info-muted: hsl(214, 100%, 96%);
+    --success: hsl(142, 70%, 35%);
+    --success-foreground: hsl(0, 0%, 100%);
+    --success-muted: hsl(142, 76%, 95%);
+    --warning: hsl(38, 92%, 42%);
+    --warning-foreground: hsl(26, 90%, 15%);
+    --warning-muted: hsl(48, 100%, 96%);
     --border: hsl(214, 16%, 88%);
     --input: hsl(214, 16%, 84%);
     --ring: hsl(0, 0%, 3.9%);
@@ -128,6 +149,15 @@
     --accent-foreground: hsl(0, 0%, 98%);
     --destructive: hsl(0, 84%, 60%);
     --destructive-foreground: hsl(0, 0%, 98%);
+    --info: hsl(217, 91%, 65%);
+    --info-foreground: hsl(222, 47%, 11%);
+    --info-muted: hsl(217, 45%, 18%);
+    --success: hsl(142, 70%, 45%);
+    --success-foreground: hsl(144, 61%, 8%);
+    --success-muted: hsl(143, 45%, 16%);
+    --warning: hsl(43, 96%, 56%);
+    --warning-foreground: hsl(26, 90%, 10%);
+    --warning-muted: hsl(38, 40%, 17%);
     --border: hsl(0, 0%, 14.9%);
     --input: hsl(0, 0%, 14.9%);
     --ring: hsl(0, 0%, 83.1%);
@@ -166,13 +196,25 @@
         background: white;
         font-size: 10px;
     }
+    body * {
+        visibility: hidden !important;
+    }
     [data-print-hidden] {
         display: none !important;
     }
     [data-receipt] {
+        position: absolute !important;
+        top: 0;
+        left: 0;
         display: block !important;
+        visibility: visible !important;
         width: 54mm;
+        max-width: 54mm;
+        overflow-wrap: anywhere;
         box-shadow: none !important;
         border: 0 !important;
+    }
+    [data-receipt] * {
+        visibility: visible !important;
     }
 }

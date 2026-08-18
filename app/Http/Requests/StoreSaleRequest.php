@@ -19,6 +19,8 @@ class StoreSaleRequest extends FormRequest
             'shift_id' => ['required', 'exists:shifts,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'source' => ['required', Rule::in(['online', 'offline_sync'])],
+            'occurred_at' => ['nullable', 'date'],
+            'queued_at' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
             'owner_pin' => ['nullable', 'digits_between:4,12'],
             'items' => ['required', 'array', 'min:1'],

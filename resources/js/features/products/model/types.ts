@@ -8,6 +8,7 @@ export type UnitRow = {
     barcode: string;
     is_base: boolean;
     is_default_sale: boolean;
+    allows_fractional_quantity: boolean;
 };
 
 export type Product = {
@@ -29,6 +30,7 @@ export type Product = {
             conversion_to_base: string;
             is_base: boolean;
             is_default_sale: boolean;
+            allows_fractional_quantity: boolean;
             unit: Unit;
             barcodes: Array<{ value: string }>;
         }>;

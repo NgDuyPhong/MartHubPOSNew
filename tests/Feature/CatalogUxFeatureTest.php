@@ -104,3 +104,15 @@ test('customer search is accent-insensitive and debt filter is server-side', fun
 
     $this->actingAs($owner)->get('/customers?search=nguyen&debt=with_debt')->assertInertia(fn ($page) => $page->where('customers.total', 1));
 });
+
+test('quick customer creation returns a customer ready for POS selection', function () {
+    [$organization, , $owner] = catalogUser();
+
+    $response = $this->actingAs($owner)->postJson(route('customers.quick.store'), [
+        'name' => 'Khách mua nhanh',
+        'phone' => '0900000000',
+    ]);
+
+    $response->assertCreated()->assertJsonPath('customer.name', 'Khách mua nhanh')->assertJsonPath('customer.balance', 0);
+    expect(Customer::query()->where('organization_id', $organization->id)->where('name', 'Khách mua nhanh')->exists())->toBeTrue();
+});

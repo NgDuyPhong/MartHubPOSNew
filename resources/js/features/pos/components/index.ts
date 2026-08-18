@@ -1,6 +1,10 @@
 export { CartSummary } from './cart-summary';
 export { CartTable } from './cart-table';
 export { CatalogPanel } from './catalog-panel';
+export { HeldCartsPanel } from './held-carts-panel';
+export { QuickCustomerDialog } from './quick-customer-dialog';
 export { OpenShiftDialog } from './open-shift-dialog';
 export { PosStatusBar } from './pos-status-bar';
 export { ReceiptPreview, SaleSuccessBar } from './receipt-preview';
+export { SyncCenter } from './sync-center';
+export { VariantUnitPicker } from './variant-unit-picker';

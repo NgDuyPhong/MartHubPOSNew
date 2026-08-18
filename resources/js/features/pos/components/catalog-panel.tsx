@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { formatMoney, formatQuantity } from '@/lib/format';
 import { MoreHorizontal, Package, Search } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { getDefaultSellableSelection } from '../model/selectors';
 import type { Product, ProductUnit, Variant } from '../model/types';
 
 type Category = { id: number; name: string; color?: string };
@@ -12,20 +13,33 @@ const PRODUCT_BATCH_SIZE = 100;
 const CatalogProductCard = memo(function CatalogProductCard({
     product,
     onAdd,
+    onPick,
     canManageCatalog,
     onQuickEdit,
 }: {
     product: Product;
     onAdd: (product: Product, variant: Variant, unit: ProductUnit) => void;
+    onPick: (product: Product) => void;
     canManageCatalog: boolean;
     onQuickEdit: (product: Product, unit?: ProductUnit) => void;
 }) {
-    const variant = product.variants[0];
-    const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
-    const stock = Number(variant?.balances[0]?.quantity_base ?? 0);
+    const defaultSelection = getDefaultSellableSelection(product);
+    const variant = defaultSelection?.variant;
+    const unit = defaultSelection?.unit;
+    const stock = variant
+        ? Number(variant.balances[0]?.quantity_base ?? 0)
+        : product.variants.reduce((total, item) => total + Number(item.balances[0]?.quantity_base ?? 0), 0);
+    const stockLabel = !defaultSelection
+        ? 'Nhiều quy cách'
+        : stock <= 0
+          ? 'Hết tồn · vẫn cho bán âm'
+          : stock <= 5
+            ? `Tồn thấp: ${formatQuantity(stock)}`
+            : `Tồn: ${formatQuantity(stock)}`;
 
     const addDefault = () => {
         if (variant && unit) onAdd(product, variant, unit);
+        else onPick(product);
     };
 
     return (
@@ -42,49 +56,43 @@ const CatalogProductCard = memo(function CatalogProductCard({
                     onQuickEdit(product, unit);
                 }
             }}
-            className="group bg-card focus-visible:ring-ring relative flex min-h-32 flex-col rounded-lg border p-3 text-left transition hover:border-primary hover:shadow-md focus-visible:ring-2"
+            className="group bg-card focus-visible:ring-ring hover:border-primary relative flex min-h-32 flex-col rounded-lg border p-3 text-left transition hover:shadow-md focus-visible:ring-2"
         >
             <button type="button" onClick={addDefault} className="flex min-w-0 flex-1 flex-col text-left">
                 {product.image_path ? (
-                    <img src={`/storage/${product.image_path}`} alt="" loading="lazy" decoding="async" className="mb-2 size-12 rounded-md object-cover" />
+                    <img
+                        src={`/storage/${product.image_path}`}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="mb-2 size-12 rounded-md object-cover"
+                    />
                 ) : (
                     <div className="bg-primary/10 text-primary mb-2 flex size-9 items-center justify-center rounded-md">
                         <Package className="size-5" />
                     </div>
                 )}
                 <span className="line-clamp-2 min-h-10 text-sm font-semibold">{product.name}</span>
-                <span className="text-muted-foreground text-xs">
-                    {product.sku} · Tồn {formatQuantity(stock)}
+                <span
+                    className={`text-xs ${defaultSelection && stock <= 0 ? 'text-destructive' : defaultSelection && stock <= 5 ? 'text-warning' : 'text-muted-foreground'}`}
+                >
+                    {product.sku} · {stockLabel}
                 </span>
                 <div className="mt-auto flex w-full items-end justify-between">
-                    <strong className="text-primary">{formatMoney(unit?.sale_price ?? 0)}đ</strong>
-                    <span className="text-xs">/{unit?.unit.name}</span>
+                    <strong className="text-primary">{unit ? `${formatMoney(unit.sale_price)}đ` : 'Chọn quy cách'}</strong>
+                    <span className="text-xs">{unit ? `/${unit.unit.name}` : 'Nhiều lựa chọn'}</span>
                 </div>
             </button>
             {canManageCatalog && (
                 <button
                     type="button"
-                    className="hover:bg-accent absolute top-2 right-2 rounded-md p-1.5 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="hover:bg-accent focus-visible:ring-ring absolute top-2 right-2 rounded-md p-1.5 focus-visible:ring-2"
                     onClick={() => onQuickEdit(product, unit)}
                     aria-label={`Sửa nhanh ${product.name}`}
                     title="Sửa nhanh sản phẩm"
                 >
                     <MoreHorizontal className="size-4" />
                 </button>
-            )}
-            {variant && variant.units.length > 1 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                    {variant.units.map((choice) => (
-                        <button
-                            type="button"
-                            key={choice.id}
-                            onClick={() => onAdd(product, variant, choice)}
-                            className="bg-muted hover:bg-accent rounded px-1.5 py-1 text-[11px]"
-                        >
-                            {choice.unit.name}
-                        </button>
-                    ))}
-                </div>
             )}
         </div>
     );
@@ -102,6 +110,7 @@ export function CatalogPanel({
     onCategoryChange,
     onSearchKey,
     onAdd,
+    onPick,
     canManageCatalog,
     onQuickEdit,
 }: {
@@ -116,6 +125,7 @@ export function CatalogPanel({
     onCategoryChange: (value: number | null) => void;
     onSearchKey: (event: React.KeyboardEvent<HTMLInputElement>) => void;
     onAdd: (product: Product, variant: Variant, unit: ProductUnit) => void;
+    onPick: (product: Product) => void;
     canManageCatalog: boolean;
     onQuickEdit: (product: Product, unit?: ProductUnit) => void;
 }) {
@@ -143,6 +153,7 @@ export function CatalogPanel({
                         onKeyDown={onSearchKey}
                         className="pl-9"
                         autoFocus
+                        aria-label="Tìm sản phẩm hoặc quét mã vạch"
                         placeholder="Quét mã vạch hoặc tìm tên, SKU (F3)"
                     />
                 </div>
@@ -169,7 +180,14 @@ export function CatalogPanel({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
                 <div className="grid auto-rows-min grid-cols-2 gap-2 xl:grid-cols-3">
                     {visibleProducts.map((product) => (
-                        <CatalogProductCard key={product.id} product={product} onAdd={onAdd} canManageCatalog={canManageCatalog} onQuickEdit={onQuickEdit} />
+                        <CatalogProductCard
+                            key={product.id}
+                            product={product}
+                            onAdd={onAdd}
+                            onPick={onPick}
+                            canManageCatalog={canManageCatalog}
+                            onQuickEdit={onQuickEdit}
+                        />
                     ))}
                 </div>
                 {hasMoreProducts && (

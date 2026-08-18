@@ -42,6 +42,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('shifts', [ShiftController::class, 'store'])->name('shifts.store');
     Route::post('shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
     Route::post('shifts/{shift}/cash-movements', [ShiftController::class, 'cashMovement'])->name('shifts.cash-movements.store');
+    Route::post('shifts/{shift}/reconcile', [ShiftController::class, 'reconcile'])->name('shifts.reconcile');
 
     Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
     Route::get('sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
@@ -50,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+    Route::post('customers/quick', [CustomerController::class, 'storeQuick'])->middleware('throttle:30,1')->name('customers.quick.store');
     Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
     Route::post('customers/{customer}/payments', [CustomerController::class, 'payment'])->name('customers.payments.store');
 

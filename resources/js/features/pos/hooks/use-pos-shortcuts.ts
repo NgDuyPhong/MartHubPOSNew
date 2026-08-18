@@ -5,6 +5,7 @@ type ShortcutOptions = {
     checkoutExpanded: boolean;
     total: number;
     selectedKey: string | null;
+    dialogOpen: boolean;
     clearCart: () => void;
     removeLine: (key: string) => void;
     setCash: (value: number) => void;
@@ -18,13 +19,16 @@ type ShortcutOptions = {
 export function usePosShortcuts(options: ShortcutOptions): void {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement | null;
+            const typingTarget = target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+            if (event.repeat || options.dialogOpen) return;
             if (event.key === 'F3') {
                 event.preventDefault();
                 options.searchRef.current?.focus();
             }
             if (event.key === 'F8') {
                 event.preventDefault();
-                options.clearCart();
+                if (!typingTarget) options.clearCart();
             }
             if (event.key === 'F9' && options.cartLength) {
                 event.preventDefault();
@@ -42,7 +46,8 @@ export function usePosShortcuts(options: ShortcutOptions): void {
                 options.collapseCheckout();
                 options.searchRef.current?.focus();
             }
-            if (event.key === 'Delete' && options.selectedKey) {
+            if (event.key === 'Delete' && options.selectedKey && !typingTarget) {
+                event.preventDefault();
                 options.removeLine(options.selectedKey);
             }
         };

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { InertiaFormProps } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 
 export function OpenShiftDialog({
     open,
@@ -10,20 +11,44 @@ export function OpenShiftDialog({
     registers,
     form,
     searchRef,
+    required = false,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     registers: Array<{ id: number; name: string }>;
     form: InertiaFormProps<{ register_id: number; opening_cash: number }>;
     searchRef: React.RefObject<HTMLInputElement | null>;
+    required?: boolean;
 }) {
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (required && !nextOpen) return;
+                onOpenChange(nextOpen);
+            }}
+        >
+            <DialogContent
+                showClose={!required}
+                onEscapeKeyDown={(event) => {
+                    if (required) event.preventDefault();
+                }}
+                onPointerDownOutside={(event) => {
+                    if (required) event.preventDefault();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>Mở ca bán hàng</DialogTitle>
                     <DialogDescription>Cần ghi nhận tiền đầu ca trước khi phát sinh hóa đơn.</DialogDescription>
                 </DialogHeader>
+                {required && (
+                    <div className="bg-warning-muted text-warning-foreground border-warning/40 rounded-md border px-3 py-2 text-sm" role="status">
+                        POS đang khóa bán vì chưa có ca mở. Bạn có thể mở ca ngay hoặc đi tới màn hình quản lý ca.
+                        <Link href={route('shifts.index')} className="text-primary mt-1 block font-medium underline underline-offset-2">
+                            Mở màn hình ca
+                        </Link>
+                    </div>
+                )}
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();
@@ -39,12 +64,13 @@ export function OpenShiftDialog({
                     className="space-y-4"
                 >
                     <div>
-                        <Label>Quầy</Label>
+                        <Label htmlFor="pos-open-shift-register">Quầy</Label>
                         <select
+                            id="pos-open-shift-register"
                             name="register_id"
                             value={form.data.register_id}
                             onChange={(event) => form.setData('register_id', Number(event.target.value))}
-                            className="mt-1 h-10 w-full rounded-md border bg-white px-3"
+                            className="bg-background mt-1 h-10 w-full rounded-md border px-3"
                             required
                         >
                             {registers.map((register) => (
@@ -55,8 +81,9 @@ export function OpenShiftDialog({
                         </select>
                     </div>
                     <div>
-                        <Label>Tiền đầu ca</Label>
+                        <Label htmlFor="pos-opening-cash">Tiền đầu ca</Label>
                         <Input
+                            id="pos-opening-cash"
                             name="opening_cash"
                             type="number"
                             min="0"
@@ -66,7 +93,7 @@ export function OpenShiftDialog({
                         />
                     </div>
                     {Object.keys(form.errors).length > 0 && (
-                        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        <div className="text-destructive border-destructive/30 bg-destructive/10 rounded-md border px-3 py-2 text-sm">
                             {Object.values(form.errors)[0]}
                         </div>
                     )}

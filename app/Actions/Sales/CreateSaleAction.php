@@ -14,6 +14,7 @@ use App\Models\Sale;
 use App\Models\Shift;
 use App\Models\User;
 use App\Services\OwnerApprovalService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,12 +41,24 @@ class CreateSaleAction
         return DB::transaction(function () use ($user, $data, $requestHash) {
             $shift = Shift::query()
                 ->whereKey($data['shift_id'])
-                ->where('status', 'open')
                 ->whereHas('register', fn ($query) => $query->where('branch_id', $user->branch_id))
                 ->lockForUpdate()
                 ->first();
             if (! $shift) {
-                throw ValidationException::withMessages(['shift_id' => 'Cần mở ca tại đúng chi nhánh trước khi bán hàng.']);
+                throw ValidationException::withMessages(['shift_id' => 'Ca bán không thuộc chi nhánh hiện tại.']);
+            }
+
+            $occurredAt = isset($data['occurred_at']) ? Carbon::parse($data['occurred_at']) : now();
+            if ($data['source'] === 'online' && $shift->status !== 'open') {
+                throw ValidationException::withMessages(['shift_id' => 'Sale online chỉ được ghi vào ca đang mở.']);
+            }
+            if ($data['source'] === 'offline_sync') {
+                $outsideShiftWindow = $occurredAt->lt($shift->opened_at->copy()->subMinutes(5))
+                    || ($shift->closed_at && $occurredAt->gt($shift->closed_at->copy()->addMinutes(5)))
+                    || (! $shift->closed_at && $occurredAt->gt(now()->addMinutes(5)));
+                if ($outsideShiftWindow) {
+                    throw ValidationException::withMessages(['occurred_at' => 'Thời điểm bán offline nằm ngoài khoảng thời gian của ca gốc.']);
+                }
             }
 
             $customer = isset($data['customer_id'])
@@ -56,7 +69,7 @@ class CreateSaleAction
             $discountTotal = 0;
             $needsApproval = false;
 
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] as $index => $item) {
                 $productUnit = ProductUnit::query()
                     ->with(['unit', 'variant.product'])
                     ->whereKey($item['product_unit_id'])
@@ -67,12 +80,19 @@ class CreateSaleAction
                 }
 
                 $quantity = (float) $item['quantity'];
+                if (! $productUnit->allows_fractional_quantity && fmod($quantity, 1.0) !== 0.0) {
+                    throw ValidationException::withMessages(["items.{$index}.quantity" => 'Đơn vị này chỉ nhận số lượng nguyên.']);
+                }
+                $quantityString = (string) $item['quantity'];
+                if (str_contains($quantityString, '.') && strlen((string) str($quantityString)->after('.')) > 6) {
+                    throw ValidationException::withMessages(["items.{$index}.quantity" => 'Số lượng chỉ được tối đa 6 chữ số thập phân.']);
+                }
                 $originalPrice = (int) $productUnit->sale_price;
                 $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null ? (int) $item['unit_price'] : $originalPrice;
                 $discount = (int) ($item['discount_amount'] ?? 0);
                 $gross = (int) round($unitPrice * $quantity);
                 if ($discount > $gross) {
-                    throw ValidationException::withMessages(['items' => 'Giảm giá không được lớn hơn thành tiền của dòng hàng.']);
+                    throw ValidationException::withMessages(["items.{$index}.discount_amount" => 'Giảm giá không được lớn hơn thành tiền của dòng hàng.']);
                 }
 
                 $needsApproval = $needsApproval || $unitPrice !== $originalPrice || $discount > 0;
@@ -111,7 +131,8 @@ class CreateSaleAction
                 'debt_amount' => $debtAmount,
                 'change_amount' => $changeAmount,
                 'note' => $data['note'] ?? null,
-                'sold_at' => now(),
+                'sold_at' => $data['source'] === 'offline_sync' ? $occurredAt : now(),
+                'synced_at' => $data['source'] === 'offline_sync' ? now() : null,
             ]);
 
             foreach ($preparedItems as $prepared) {
@@ -164,7 +185,7 @@ class CreateSaleAction
                     'status' => 'confirmed',
                     'reference' => $paymentData['reference'] ?? null,
                     'manually_confirmed' => (bool) ($paymentData['manually_confirmed'] ?? false),
-                    'paid_at' => now(),
+                    'paid_at' => $data['source'] === 'offline_sync' ? $occurredAt : now(),
                 ]);
                 $remaining -= $applied;
             }
@@ -181,6 +202,11 @@ class CreateSaleAction
                     'source_id' => $sale->id,
                     'note' => 'Công nợ từ '.$sale->invoice_number,
                 ]);
+            }
+
+            $hasCashPayment = collect($data['payments'] ?? [])->contains(fn (array $payment): bool => $payment['method'] === 'cash' && (int) $payment['amount'] > 0);
+            if ($data['source'] === 'offline_sync' && $shift->status === 'closed' && $hasCashPayment) {
+                $this->markShiftForReconciliation($shift, $sale->invoice_number);
             }
 
             if ($approver) {
@@ -217,5 +243,23 @@ class CreateSaleAction
             $this->adjustInventory->execute($user->branch_id, $variantId, -$consumed, 'lot_sale', $user, $balance->inventory_lot_id, Sale::class, $saleId);
             $remaining -= $consumed;
         }
+    }
+
+    private function markShiftForReconciliation(Shift $shift, string $invoiceNumber): void
+    {
+        $cashInPayments = (int) Payment::query()->where('shift_id', $shift->id)->where('method', 'cash')->where('direction', 'in')->where('status', 'confirmed')->sum('amount');
+        $cashOutPayments = (int) Payment::query()->where('shift_id', $shift->id)->where('method', 'cash')->where('direction', 'out')->where('status', 'confirmed')->sum('amount');
+        $cashIn = (int) $shift->cashMovements()->where('type', 'in')->sum('amount');
+        $cashOut = (int) $shift->cashMovements()->where('type', 'out')->sum('amount');
+        $expectedCash = (int) $shift->opening_cash + $cashInPayments - $cashOutPayments + $cashIn - $cashOut;
+
+        $shift->update([
+            'expected_cash' => $expectedCash,
+            'difference_cash' => $shift->actual_cash === null ? null : (int) $shift->actual_cash - $expectedCash,
+            'needs_reconciliation' => true,
+            'reconciled_at' => null,
+            'reconciled_by' => null,
+            'reconciliation_note' => 'Sale offline đến muộn: '.$invoiceNumber,
+        ]);
     }
 }

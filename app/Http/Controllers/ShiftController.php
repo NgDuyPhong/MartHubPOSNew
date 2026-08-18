@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Actions\Shifts\CloseShiftAction;
 use App\Actions\Shifts\OpenShiftAction;
+use App\Actions\Shifts\ReconcileShiftAction;
 use App\Actions\Shifts\RecordShiftCashMovementAction;
 use App\Http\Requests\CloseShiftRequest;
 use App\Http\Requests\OpenShiftRequest;
+use App\Http\Requests\ReconcileShiftRequest;
 use App\Http\Requests\StoreShiftCashMovementRequest;
 use App\Models\Register;
 use App\Models\Shift;
@@ -56,5 +58,12 @@ class ShiftController extends Controller
         $action->execute($request->user(), $shift, $request->validated());
 
         return back()->with('success', 'Đã ghi nhận thu/chi tiền mặt trong ca.');
+    }
+
+    public function reconcile(ReconcileShiftRequest $request, Shift $shift, ReconcileShiftAction $action): RedirectResponse
+    {
+        $action->execute($request->user(), $shift, $request->validated());
+
+        return back()->with('success', 'Đã xác nhận đối soát ca.');
     }
 }

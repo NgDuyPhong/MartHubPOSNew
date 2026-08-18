@@ -35,10 +35,13 @@ export function SaleReceipt({
                                     <div className="font-semibold">{item.product_name}</div>
                                     <div className="text-xs text-slate-500">
                                         {item.product_sku}
+                                        {item.variant_name ? ` · ${item.variant_name}` : ''}
                                         {item.price_overridden ? ' · Đã sửa giá (có duyệt)' : ''}
                                     </div>
                                 </td>
-                                <td className="px-4">{item.unit_name}</td>
+                                <td className="px-4">
+                                    {item.quantity} {item.unit_name}
+                                </td>
                                 <td className="px-4 text-right">{Number(item.quantity)}</td>
                                 <td className="px-4 text-right">{formatMoney(item.unit_price)}đ</td>
                                 <td className="px-4 text-right text-orange-600">{formatMoney(item.discount_amount)}đ</td>
@@ -65,6 +68,18 @@ export function SaleReceipt({
                     <span>Còn nợ</span>
                     <span>{formatMoney(sale.debt_amount)}đ</span>
                 </div>
+                {'paid_amount' in sale && (
+                    <div className="flex justify-between">
+                        <span>Đã thu</span>
+                        <span>{formatMoney(sale.paid_amount as number)}đ</span>
+                    </div>
+                )}
+                {'change_amount' in sale && (sale.change_amount as number) > 0 && (
+                    <div className="flex justify-between">
+                        <span>Tiền thừa</span>
+                        <span>{formatMoney(sale.change_amount as number)}đ</span>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,12 +1,18 @@
-import { ProductQuickEditSheet } from '@/features/products';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
+    exportPendingSales,
     filterCatalogWithIndex,
     findBarcodeMatchWithIndex,
+    getDefaultSellableSelection,
+    getLastReceipt,
+    saveLastReceipt,
     useCatalogSearch,
     useConnectivity,
-    usePosCart,
+    usePosCarts,
     usePosCheckout,
     usePosShortcuts,
+    type CheckoutDraftSnapshot,
     type Customer,
     type Product,
     type ProductUnit,
@@ -14,10 +20,23 @@ import {
     type Shift,
     type Variant,
 } from '@/features/pos';
-import { CartSummary, CartTable, CatalogPanel, OpenShiftDialog, PosStatusBar, ReceiptPreview, SaleSuccessBar } from '@/features/pos/components';
+import {
+    CartSummary,
+    CartTable,
+    CatalogPanel,
+    HeldCartsPanel,
+    OpenShiftDialog,
+    PosStatusBar,
+    QuickCustomerDialog,
+    ReceiptPreview,
+    SaleSuccessBar,
+    SyncCenter,
+} from '@/features/pos/components';
+import { VariantUnitPicker } from '@/features/pos/components/variant-unit-picker';
+import { ProductQuickEditSheet } from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Head, useForm, usePoll } from '@inertiajs/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type PosProps = {
     catalog: Product[];
@@ -27,28 +46,116 @@ type PosProps = {
     registers: Array<{ id: number; name: string }>;
     expiryAlerts: number;
     canManageCatalog: boolean;
+    latestReceipt: SaleReceipt | null;
 };
 
-export default function PosPage({ catalog, categories, customers, activeShift, registers, expiryAlerts, canManageCatalog }: PosProps) {
+export default function PosPage({ catalog, categories, customers, activeShift, registers, expiryAlerts, canManageCatalog, latestReceipt }: PosProps) {
     const [query, setQuery] = useState('');
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
+    const [storedReceipt, setStoredReceipt] = useState<SaleReceipt | null>(latestReceipt);
     const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
+    const [customerOptions, setCustomerOptions] = useState<Customer[]>(customers);
+    const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
     const [openShiftOpen, setOpenShiftOpen] = useState(!activeShift);
     const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
     const [quickEditUnitId, setQuickEditUnitId] = useState<number | undefined>();
+    const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
+    const [clearDialogOpen, setClearDialogOpen] = useState(false);
+    const [syncCenterOpen, setSyncCenterOpen] = useState(false);
+    const [undoCart, setUndoCart] = useState<ReturnType<typeof usePosCarts>['cart']>([]);
     const searchRef = useRef<HTMLInputElement>(null);
     const checkoutRef = useRef<HTMLDivElement>(null);
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
     const openShiftForm = useForm({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
-    const { cart, selectedKey, addLine, updateLine, removeLine, clearCart, selectLine } = usePosCart();
-    const hasStaleCartPrice = useMemo(() => cart.some((line) => catalog.find((item) => item.id === line.product.id)?.variants.flatMap((variant) => variant.units).find((unit) => unit.id === line.productUnit.id)?.sale_price !== line.productUnit.sale_price), [cart, catalog]);
+    useEffect(() => setCustomerOptions(customers), [customers]);
+    usePoll(30000, { only: ['activeShift'] }, { keepAlive: true });
+    useEffect(() => setOpenShiftOpen(!activeShift), [activeShift]);
+    const {
+        cart,
+        selectedKey,
+        addLine,
+        updateLine,
+        removeLine,
+        clearCart,
+        replaceCart,
+        selectLine,
+        drafts,
+        activeCartId,
+        activeDraft,
+        ready: cartsReady,
+        persistActiveCart,
+        createCart,
+        holdCart,
+        switchCart,
+        renameCart,
+        deleteCart,
+    } = usePosCarts();
+    const hasStaleCartPrice = useMemo(
+        () =>
+            cart.some(
+                (line) =>
+                    catalog
+                        .find((item) => item.id === line.product.id)
+                        ?.variants.flatMap((variant) => variant.units)
+                        .find((unit) => unit.id === line.productUnit.id)?.sale_price !== line.productUnit.sale_price,
+            ),
+        [cart, catalog],
+    );
     const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(catalog, query, categoryId);
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
-    const { online, pendingCount, refreshPending } = useConnectivity(catalog, onSync);
+    const { online, pendingCount, records, refreshPending, syncNow, retry } = useConnectivity(catalog, onSync);
+    useEffect(() => {
+        void getLastReceipt()
+            .then((savedReceipt) => {
+                if (savedReceipt) setStoredReceipt(savedReceipt);
+            })
+            .catch(() => undefined);
+    }, []);
+
+    useEffect(() => {
+        const refreshStoredReceipt = () => {
+            void getLastReceipt()
+                .then((savedReceipt) => {
+                    if (savedReceipt) setStoredReceipt(savedReceipt);
+                })
+                .catch(() => undefined);
+        };
+
+        window.addEventListener('pos:receipt-updated', refreshStoredReceipt);
+        return () => window.removeEventListener('pos:receipt-updated', refreshStoredReceipt);
+    }, []);
+    const handleExportRecovery = useCallback(async () => {
+        const blob = new Blob([await exportPendingSales()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `marthub-pos-recovery-${new Date().toISOString().slice(0, 10)}.json`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+    }, []);
+    const requestClearCart = useCallback(() => {
+        if (cart.length) setClearDialogOpen(true);
+    }, [cart.length]);
+    const confirmClearCart = useCallback(() => {
+        setUndoCart(cart);
+        clearCart();
+        setClearDialogOpen(false);
+        setMessage('Đã xóa hóa đơn hiện tại.');
+    }, [cart, clearCart]);
+    const undoClearCart = useCallback(() => {
+        if (!undoCart.length) return;
+        replaceCart(undoCart);
+        setUndoCart([]);
+        setMessage(null);
+    }, [replaceCart, undoCart]);
     const handleSaleSuccess = useCallback((saleReceipt: SaleReceipt) => {
         setReceipt(saleReceipt);
+        setStoredReceipt(saleReceipt);
+        void saveLastReceipt(saleReceipt)
+            .then(() => window.dispatchEvent(new Event('pos:receipt-updated')))
+            .catch(() => undefined);
         setReceiptPreviewOpen(false);
         window.setTimeout(() => searchRef.current?.focus(), 0);
     }, []);
@@ -56,12 +163,78 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         cart,
         activeShift,
         online,
-        customers,
+        customers: customerOptions,
         clearCart,
         refreshPending,
         onMessage: setMessage,
         onSuccess: handleSaleSuccess,
     });
+    const { restoreDraft } = checkout;
+    const handleQuickCustomerCreated = useCallback(
+        (customer: Customer) => {
+            setCustomerOptions((current) =>
+                [...current.filter((item) => item.id !== customer.id), customer].sort((left, right) => left.name.localeCompare(right.name)),
+            );
+            checkout.setCustomerId(customer.id);
+            setMessage(`Đã tạo và chọn khách hàng ${customer.name}.`);
+        },
+        [checkout, setMessage],
+    );
+    const checkoutSnapshot = useMemo<CheckoutDraftSnapshot>(
+        () => ({ customerId: checkout.customerId, cash: checkout.cash, qr: checkout.qr, qrConfirmed: checkout.qrConfirmed }),
+        [checkout.cash, checkout.customerId, checkout.qr, checkout.qrConfirmed],
+    );
+    const checkoutSnapshotRef = useRef(checkoutSnapshot);
+    const restoredCartIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        checkoutSnapshotRef.current = checkoutSnapshot;
+    }, [checkoutSnapshot]);
+
+    useEffect(() => {
+        if (!cartsReady || !activeDraft || restoredCartIdRef.current !== null) return;
+        restoredCartIdRef.current = activeDraft.id;
+        restoreDraft(activeDraft.checkout);
+    }, [activeDraft, cartsReady, restoreDraft]);
+
+    useEffect(() => {
+        if (cartsReady) persistActiveCart(checkoutSnapshot);
+    }, [cart, cartsReady, checkoutSnapshot, persistActiveCart]);
+
+    useEffect(() => {
+        const flushActiveCart = () => persistActiveCart(checkoutSnapshotRef.current);
+
+        window.addEventListener('visibilitychange', flushActiveCart);
+        return () => window.removeEventListener('visibilitychange', flushActiveCart);
+    }, [persistActiveCart]);
+
+    const focusSearchAfterCartChange = useCallback(() => {
+        setQuery('');
+        setReceipt(null);
+        window.setTimeout(() => searchRef.current?.focus(), 0);
+    }, []);
+
+    const createNewCart = useCallback(() => {
+        const nextDraft = createCart(checkoutSnapshot);
+        restoreDraft(nextDraft.checkout);
+        focusSearchAfterCartChange();
+    }, [checkoutSnapshot, createCart, focusSearchAfterCartChange, restoreDraft]);
+
+    const holdCurrentCart = useCallback(() => {
+        const nextDraft = holdCart(checkoutSnapshot);
+        restoreDraft(nextDraft.checkout);
+        focusSearchAfterCartChange();
+    }, [checkoutSnapshot, focusSearchAfterCartChange, holdCart, restoreDraft]);
+
+    const switchToCart = useCallback(
+        (id: string) => {
+            const nextDraft = switchCart(id, checkoutSnapshot);
+            if (!nextDraft) return;
+            restoreDraft(nextDraft.checkout);
+            focusSearchAfterCartChange();
+        },
+        [checkoutSnapshot, focusSearchAfterCartChange, restoreDraft, switchCart],
+    );
     const addUnit = useCallback(
         (product: Product, variant: Variant, unit: ProductUnit) => {
             setReceipt(null);
@@ -90,9 +263,9 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 const matches = filterCatalogWithIndex(catalogSearchIndex, query, categoryId);
                 if (matches.length !== 1) return;
                 const product = matches[0];
-                const variant = product.variants[0];
-                const unit = variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
-                if (variant && unit) addUnit(product, variant, unit);
+                const selection = getDefaultSellableSelection(product);
+                if (selection) addUnit(product, selection.variant, selection.unit);
+                else setPickerProduct(product);
             }
         },
         [addUnit, catalogSearchIndex, categoryId, query],
@@ -103,7 +276,8 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         checkoutExpanded: checkout.expanded,
         total: checkout.total,
         selectedKey,
-        clearCart,
+        clearCart: requestClearCart,
+        dialogOpen: clearDialogOpen || Boolean(pickerProduct) || Boolean(quickEditProduct),
         removeLine,
         setCash: checkout.setCash,
         expandCheckout: () => checkout.setExpanded(true),
@@ -116,22 +290,43 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
     return (
         <AppLayout breadcrumbs={[{ title: 'Bán hàng', href: '/pos' }]}>
             <Head title="Bán hàng" />
-            <div className="bg-muted/30 flex min-h-0 flex-1 flex-col p-3 lg:h-[calc(100vh-4rem)]">
-                <PosStatusBar online={online} pendingCount={pendingCount} activeShift={activeShift} expiryAlerts={expiryAlerts} />
+            <div className="bg-muted/30 flex min-h-0 flex-1 flex-col p-3 lg:h-[calc(100dvh-4rem)]">
+                <PosStatusBar
+                    online={online}
+                    pendingCount={pendingCount}
+                    activeShift={activeShift}
+                    expiryAlerts={expiryAlerts}
+                    onOpenSync={() => setSyncCenterOpen(true)}
+                    hasLatestReceipt={Boolean(storedReceipt)}
+                    onOpenLatestReceipt={() => setReceiptPreviewOpen(true)}
+                />
                 {message && (
-                    <button
-                        className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-800"
-                        onClick={() => setMessage(null)}
+                    <div
+                        className="bg-info-muted text-info-foreground border-info/30 mb-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+                        role="status"
                     >
-                        {message}
-                    </button>
+                        <span>{message}</span>
+                        <div className="flex items-center gap-2">
+                            {undoCart.length > 0 && (
+                                <Button size="sm" variant="outline" onClick={undoClearCart}>
+                                    Hoàn tác
+                                </Button>
+                            )}
+                            <Button size="sm" variant="ghost" onClick={() => setMessage(null)}>
+                                Đóng
+                            </Button>
+                        </div>
+                    </div>
                 )}
                 {hasStaleCartPrice && (
-                    <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+                    <div
+                        className="bg-warning-muted text-warning-foreground border-warning/40 mb-2 rounded-md border px-3 py-2 text-sm"
+                        role="status"
+                    >
                         Giá catalog đã thay đổi; dòng hàng đang có trong giỏ vẫn giữ giá cũ. Sản phẩm thêm mới sẽ dùng giá hiện tại.
                     </div>
                 )}
-                <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-5">
+                <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
                         categories={categories}
                         query={query}
@@ -144,16 +339,26 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                         onCategoryChange={setCategoryId}
                         onSearchKey={handleSearchKey}
                         onAdd={addUnit}
+                        onPick={setPickerProduct}
                         canManageCatalog={canManageCatalog}
                         onQuickEdit={openQuickEdit}
                     />
-                    <section className="bg-card flex min-h-[480px] flex-col overflow-hidden rounded-lg border shadow-sm lg:col-span-3">
+                    <section className="bg-card flex min-h-[480px] min-w-0 flex-col overflow-hidden rounded-lg border shadow-sm lg:col-span-3">
+                        <HeldCartsPanel
+                            drafts={drafts}
+                            activeCartId={activeCartId}
+                            onNew={createNewCart}
+                            onSwitch={switchToCart}
+                            onRename={renameCart}
+                            onHold={holdCurrentCart}
+                            onDelete={deleteCart}
+                        />
                         <CartTable
                             cart={cart}
                             selectedKey={selectedKey}
                             online={online}
                             onSelect={selectLine}
-                            onClear={clearCart}
+                            onClear={requestClearCart}
                             onUpdate={updateLine}
                             onRemove={removeLine}
                         />
@@ -163,13 +368,14 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                             searchRef={searchRef}
                             activeShift={activeShift !== null}
                             online={online}
-                            customers={customers}
+                            customers={customerOptions}
                             {...checkout}
                             onCheckout={checkout.checkout}
                             onCashChange={checkout.setCash}
                             onQrChange={checkout.setQr}
                             onQrConfirm={checkout.setQrConfirmed}
                             onCustomerChange={checkout.setCustomerId}
+                            onQuickCreateCustomer={() => setQuickCustomerOpen(true)}
                             onOwnerPinChange={checkout.setOwnerPin}
                             onExpand={() => checkout.setExpanded(true)}
                             onCollapse={() => checkout.setExpanded(false)}
@@ -177,9 +383,56 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                     </section>
                 </div>
             </div>
-            <OpenShiftDialog open={openShiftOpen} onOpenChange={setOpenShiftOpen} registers={registers} form={openShiftForm} searchRef={searchRef} />
+            <OpenShiftDialog
+                open={openShiftOpen}
+                required={!activeShift}
+                onOpenChange={setOpenShiftOpen}
+                registers={registers}
+                form={openShiftForm}
+                searchRef={searchRef}
+            />
+            <QuickCustomerDialog
+                open={quickCustomerOpen}
+                online={online}
+                onOpenChange={setQuickCustomerOpen}
+                onCreated={handleQuickCustomerCreated}
+            />
+            <SyncCenter
+                open={syncCenterOpen}
+                onOpenChange={setSyncCenterOpen}
+                online={online}
+                records={records}
+                onSync={() => void syncNow()}
+                onRetry={(key) => void retry(key)}
+                onExport={() => void handleExportRecovery()}
+            />
             {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} />}
-            <ReceiptPreview receipt={receipt} open={receiptPreviewOpen} onOpenChange={setReceiptPreviewOpen} />
+            <ReceiptPreview receipt={receipt ?? storedReceipt} open={receiptPreviewOpen} onOpenChange={setReceiptPreviewOpen} />
+            <VariantUnitPicker
+                product={pickerProduct}
+                open={Boolean(pickerProduct)}
+                onOpenChange={(open) => !open && setPickerProduct(null)}
+                onSelect={(product, variant, unit) => {
+                    addUnit(product, variant, unit);
+                    setPickerProduct(null);
+                }}
+            />
+            <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xóa hóa đơn hiện tại?</DialogTitle>
+                        <DialogDescription>Các dòng hàng sẽ được xóa khỏi hóa đơn. Bạn vẫn có thể hoàn tác ngay sau đó.</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setClearDialogOpen(false)}>
+                            Hủy
+                        </Button>
+                        <Button type="button" variant="destructive" onClick={confirmClearCart}>
+                            Xóa hóa đơn
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <ProductQuickEditSheet
                 product={quickEditProduct}
                 unitId={quickEditUnitId}

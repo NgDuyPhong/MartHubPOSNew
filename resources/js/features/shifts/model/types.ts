@@ -6,6 +6,7 @@ export type Shift = {
     expected_cash?: number;
     actual_cash?: number;
     difference_cash?: number;
+    needs_reconciliation?: boolean;
     opened_at: string;
     register: { name: string };
 };

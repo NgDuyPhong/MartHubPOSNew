@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { CollectionState, Pagination, SearchField } from '@/components/shared';
+import { Button } from '@/components/ui/button';
 import {
     ProductFormDialog,
     ProductTable,
@@ -10,12 +10,12 @@ import {
     type Unit,
     type UnitRow,
 } from '@/features/products';
+import { useListQuery } from '@/hooks/use-list-query';
 import AppLayout from '@/layouts/app-layout';
+import type { Paginated } from '@/types/pagination';
 import { Head, useForm } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { FormEvent, useState } from 'react';
-import { useListQuery } from '@/hooks/use-list-query';
-import type { Paginated } from '@/types/pagination';
 
 type ProductFilters = {
     search: string;
@@ -51,7 +51,17 @@ export default function ProductsPage({
         track_lot: false,
         track_expiry: false,
         is_active: true,
-        units: [{ unit_id: firstUnit, conversion_to_base: 1, sale_price: 0, barcode: '', is_base: true, is_default_sale: true }],
+        units: [
+            {
+                unit_id: firstUnit,
+                conversion_to_base: 1,
+                sale_price: 0,
+                barcode: '',
+                is_base: true,
+                is_default_sale: true,
+                allows_fractional_quantity: false,
+            },
+        ],
     });
     const form = useForm<ProductFormData>(initialData());
     const { query, update, reset } = useListQuery<ProductFilters>(route('products.index'), { ...filters, page: 1 });
@@ -101,6 +111,7 @@ export default function ProductsPage({
                 barcode: row.barcodes[0]?.value ?? '',
                 is_base: row.is_base,
                 is_default_sale: row.is_default_sale,
+                allows_fractional_quantity: row.allows_fractional_quantity,
             })),
         });
         setOpen(true);
@@ -136,7 +147,7 @@ export default function ProductsPage({
                         </Button>
                     )}
                 </div>
-                <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 shadow-sm md:flex-row md:items-center">
+                <div className="bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-sm md:flex-row md:items-center">
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên, SKU hoặc barcode…" />
                     <select
                         className="bg-background h-10 rounded-md border px-3 text-sm"
@@ -162,12 +173,26 @@ export default function ProductsPage({
                         <option value="inactive">Ngừng bán</option>
                     </select>
                 </div>
-                <div className="flex flex-wrap gap-2 rounded-lg border bg-card p-3 shadow-sm">
-                    <select className="bg-background h-10 rounded-md border px-3 text-sm" value={query.sort} onChange={(event) => update('sort', event.target.value)} aria-label="Sắp xếp sản phẩm"><option value="latest">Mới tạo</option><option value="name">Tên A-Z</option><option value="sku">SKU</option></select>
+                <div className="bg-card flex flex-wrap gap-2 rounded-lg border p-3 shadow-sm">
+                    <select
+                        className="bg-background h-10 rounded-md border px-3 text-sm"
+                        value={query.sort}
+                        onChange={(event) => update('sort', event.target.value)}
+                        aria-label="Sắp xếp sản phẩm"
+                    >
+                        <option value="latest">Mới tạo</option>
+                        <option value="name">Tên A-Z</option>
+                        <option value="sku">SKU</option>
+                    </select>
                 </div>
                 <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
                     <ProductTable products={products.data} onEdit={editProduct} canManageCatalog={canManageCatalog} />
-                    <CollectionState isEmpty={!products.data.length} hasFilters={Boolean(query.search || query.category_id || query.status !== 'all' || query.sort !== 'latest')} onReset={reset} label="sản phẩm" />
+                    <CollectionState
+                        isEmpty={!products.data.length}
+                        hasFilters={Boolean(query.search || query.category_id || query.status !== 'all' || query.sort !== 'latest')}
+                        onReset={reset}
+                        label="sản phẩm"
+                    />
                     <Pagination paginator={products} routeUrl={route('products.index')} query={query} />
                 </div>
             </div>
@@ -178,7 +203,13 @@ export default function ProductsPage({
                 categories={categories}
                 units={units}
                 firstUnit={firstUnit}
-                onOpenChange={(value) => { setOpen(value); if (!value) { setEditingId(null); form.clearErrors(); } }}
+                onOpenChange={(value) => {
+                    setOpen(value);
+                    if (!value) {
+                        setEditingId(null);
+                        form.clearErrors();
+                    }
+                }}
                 onSubmit={submit}
                 updateUnit={updateUnit}
                 chooseExclusive={chooseExclusive}

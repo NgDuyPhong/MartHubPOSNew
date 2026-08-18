@@ -21,7 +21,15 @@ export function ProductUnitsEditor({
     const addUnit = () =>
         form.setData('units', [
             ...form.data.units,
-            { unit_id: firstUnit, conversion_to_base: 1, sale_price: 0, barcode: '', is_base: false, is_default_sale: false },
+            {
+                unit_id: firstUnit,
+                conversion_to_base: 1,
+                sale_price: 0,
+                barcode: '',
+                is_base: false,
+                is_default_sale: false,
+                allows_fractional_quantity: false,
+            },
         ]);
     const removeUnit = (index: number) =>
         form.setData(
@@ -42,7 +50,7 @@ export function ProductUnitsEditor({
                 {form.data.units.map((row, index) => (
                     <div
                         key={index}
-                        className="bg-muted/30 grid items-end gap-2 rounded-md border p-3 md:grid-cols-[1fr_120px_150px_1fr_auto_auto_auto]"
+                        className="bg-muted/30 grid items-end gap-2 rounded-md border p-3 md:grid-cols-[1fr_120px_150px_1fr_auto_auto_auto_auto]"
                     >
                         <div>
                             <Label htmlFor={`product-unit-${index}`}>Đơn vị</Label>
@@ -87,6 +95,14 @@ export function ProductUnitsEditor({
                         </div>
                         <label className="pb-2 text-xs">
                             <input type="radio" name="base" checked={row.is_base} onChange={() => chooseExclusive(index, 'is_base')} /> ĐV gốc
+                        </label>
+                        <label className="flex items-center gap-1 pb-2 text-xs">
+                            <input
+                                type="checkbox"
+                                checked={row.allows_fractional_quantity}
+                                onChange={(event) => updateUnit(index, { allows_fractional_quantity: event.target.checked })}
+                            />
+                            Cho phép lẻ
                         </label>
                         <label className="pb-2 text-xs">
                             <input
