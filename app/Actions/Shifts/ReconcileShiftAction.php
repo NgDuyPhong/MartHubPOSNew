@@ -4,11 +4,14 @@ namespace App\Actions\Shifts;
 
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ReconcileShiftAction
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function execute(User $user, Shift $shift, array $data): Shift
     {
         return DB::transaction(function () use ($user, $shift, $data): Shift {
@@ -28,6 +31,7 @@ class ReconcileShiftAction
                 'reconciled_by' => $user->id,
                 'reconciliation_note' => $data['reconciliation_note'] ?? $lockedShift->reconciliation_note,
             ]);
+            $this->resourceVersions->bumpAfterCommit($user, ['activeShift']);
 
             return $lockedShift->fresh();
         });

@@ -3,7 +3,7 @@ import { getCartDrafts, saveCartDrafts } from '../api/cart-draft-repository';
 import type { CartDraft, CheckoutDraftSnapshot } from '../model/types';
 import { usePosCart } from './use-pos-cart';
 
-function newDraft(name: string, active: boolean): CartDraft {
+function newDraft(name: string, active: boolean, scopeKey: string): CartDraft {
     return {
         id: crypto.randomUUID(),
         name,
@@ -11,6 +11,7 @@ function newDraft(name: string, active: boolean): CartDraft {
         checkout: { customerId: null, cash: 0, qr: 0, qrConfirmed: false },
         active,
         updatedAt: new Date().toISOString(),
+        scope_key: scopeKey,
     };
 }
 
@@ -18,7 +19,7 @@ function markActive(drafts: CartDraft[], activeCartId: string): CartDraft[] {
     return drafts.map((draft) => ({ ...draft, active: draft.id === activeCartId }));
 }
 
-export function usePosCarts() {
+export function usePosCarts(scopeKey: string) {
     const cartState = usePosCart();
     const { cart, replaceCart } = cartState;
     const [drafts, setDrafts] = useState<CartDraft[]>([]);
@@ -33,10 +34,13 @@ export function usePosCarts() {
     useEffect(() => {
         let mounted = true;
 
-        void getCartDrafts()
+        setDrafts([]);
+        setActiveCartId(null);
+        setReady(false);
+        void getCartDrafts(scopeKey)
             .then((storedDrafts) => {
                 if (!mounted) return;
-                const nextDrafts = storedDrafts.length ? storedDrafts : [newDraft('Đơn mới', true)];
+                const nextDrafts = storedDrafts.length ? storedDrafts : [newDraft('Đơn mới', true, scopeKey)];
                 const activeDraft = nextDrafts.find((draft) => draft.active) ?? nextDrafts[0];
                 const normalizedDrafts = markActive(nextDrafts, activeDraft.id);
                 setDrafts(normalizedDrafts);
@@ -46,7 +50,7 @@ export function usePosCarts() {
             })
             .catch(() => {
                 if (!mounted) return;
-                const fallbackDraft = newDraft('Đơn mới', true);
+                const fallbackDraft = newDraft('Đơn mới', true, scopeKey);
                 setDrafts([fallbackDraft]);
                 setActiveCartId(fallbackDraft.id);
                 setReady(true);
@@ -55,24 +59,24 @@ export function usePosCarts() {
         return () => {
             mounted = false;
         };
-    }, [replaceCart]);
+    }, [replaceCart, scopeKey]);
 
     useEffect(() => {
         if (!ready) return;
 
-        const timer = window.setTimeout(() => void saveCartDrafts(drafts), 350);
+        const timer = window.setTimeout(() => void saveCartDrafts(drafts, scopeKey), 350);
 
         return () => window.clearTimeout(timer);
-    }, [drafts, ready]);
+    }, [drafts, ready, scopeKey]);
 
     useEffect(() => {
         const flushDrafts = () => {
-            if (ready) void saveCartDrafts(draftsRef.current);
+            if (ready) void saveCartDrafts(draftsRef.current, scopeKey);
         };
 
         window.addEventListener('visibilitychange', flushDrafts);
         return () => window.removeEventListener('visibilitychange', flushDrafts);
-    }, [ready]);
+    }, [ready, scopeKey]);
 
     const activeDraft = drafts.find((draft) => draft.id === activeCartId) ?? null;
 
@@ -90,7 +94,7 @@ export function usePosCarts() {
 
     const createCart = useCallback(
         (checkout: CheckoutDraftSnapshot, name = 'Đơn mới'): CartDraft => {
-            const draft = newDraft(name, true);
+            const draft = newDraft(name, true, scopeKey);
             setDrafts((current) => [
                 ...markActive(
                     current.map((item) => (item.id === activeCartId ? { ...item, cart, checkout, updatedAt: new Date().toISOString() } : item)),
@@ -102,7 +106,7 @@ export function usePosCarts() {
             replaceCart([]);
             return draft;
         },
-        [activeCartId, cart, replaceCart],
+        [activeCartId, cart, replaceCart, scopeKey],
     );
 
     const holdCart = useCallback((checkout: CheckoutDraftSnapshot): CartDraft => createCart(checkout, 'Đơn đang giữ'), [createCart]);

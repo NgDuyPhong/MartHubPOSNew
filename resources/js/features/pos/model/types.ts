@@ -22,7 +22,20 @@ export type Product = {
     variants: Variant[];
 };
 
-export type Customer = { id: number; code: string; name: string; phone?: string; balance: number };
+export type CategoryOption = { id: number; name: string; color?: string };
+
+export type PosVersions = { catalog: string; inventory: string; customers: string; activeShift: string };
+
+export type PosSnapshot = {
+    key: string;
+    schemaVersion: number;
+    serverVersion: string;
+    fetchedAt: string;
+    catalog: Product[];
+    categories: CategoryOption[];
+};
+
+export type Customer = { id: number; code: string; name: string; phone?: string; balance: number; is_active?: boolean };
 
 export type Shift = {
     id: number;
@@ -57,6 +70,7 @@ export type CartDraft = {
     checkout: CheckoutDraftSnapshot;
     active: boolean;
     updatedAt: string;
+    scope_key?: string;
 };
 
 export type SaleReceipt = {

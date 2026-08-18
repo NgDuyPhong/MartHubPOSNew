@@ -116,6 +116,16 @@ export function requiresOwnerOverride(cart: CartLine[]): boolean {
     return cart.some((line) => line.unitPrice !== line.productUnit.sale_price || line.discount > 0);
 }
 
+export function hasStalePriceOverride(cart: CartLine[], catalog: Product[]): boolean {
+    return cart.some((line) => {
+        const currentUnit = catalog
+            .flatMap((product) => product.variants.flatMap((variant) => variant.units))
+            .find((unit) => unit.id === line.productUnit.id);
+
+        return currentUnit !== undefined && currentUnit.sale_price !== line.unitPrice;
+    });
+}
+
 export function findBarcodeMatch(catalog: Product[], barcode: string): BarcodeMatch | null {
     return findBarcodeMatchWithIndex(buildCatalogSearchIndex(catalog), barcode);
 }

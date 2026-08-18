@@ -6,11 +6,14 @@ use App\Models\Payment;
 use App\Models\Shift;
 use App\Models\ShiftCashCount;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CloseShiftAction
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function execute(User $user, Shift $shift, array $data): Shift
     {
         return DB::transaction(function () use ($user, $shift, $data) {
@@ -42,6 +45,7 @@ class CloseShiftAction
                 'closed_at' => now(),
                 'closing_note' => $data['closing_note'] ?? null,
             ]);
+            $this->resourceVersions->bumpAfterCommit($user, ['activeShift']);
 
             return $shift->fresh();
         });

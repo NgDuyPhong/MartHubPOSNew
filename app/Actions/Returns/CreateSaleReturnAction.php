@@ -11,13 +11,17 @@ use App\Models\SaleReturn;
 use App\Models\SaleReturnItem;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CreateSaleReturnAction
 {
-    public function __construct(private readonly AdjustInventoryAction $adjustInventory) {}
+    public function __construct(
+        private readonly AdjustInventoryAction $adjustInventory,
+        private readonly ResourceVersionService $resourceVersions,
+    ) {}
 
     public function execute(User $user, Sale $sale, array $data): SaleReturn
     {
@@ -74,6 +78,7 @@ class CreateSaleReturnAction
             } elseif (in_array($method, ['cash', 'qr'], true)) {
                 Payment::query()->create(['sale_id' => $sale->id, 'customer_id' => $sale->customer_id, 'shift_id' => $shift->id, 'user_id' => $user->id, 'method' => $method, 'direction' => 'out', 'amount' => $total, 'status' => 'confirmed', 'manually_confirmed' => $method === 'qr', 'paid_at' => now()]);
             }
+            $this->resourceVersions->bumpAfterCommit($user, $sale->customer_id ? ['inventory', 'customers'] : ['inventory']);
 
             return $return->load('items');
         }, 3);

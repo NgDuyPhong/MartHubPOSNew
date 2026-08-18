@@ -6,14 +6,19 @@ import {
     findBarcodeMatchWithIndex,
     getDefaultSellableSelection,
     getLastReceipt,
+    getPosFreshness,
+    getPosSnapshot,
     saveLastReceipt,
     useCatalogSearch,
     useConnectivity,
     usePosCarts,
     usePosCheckout,
     usePosShortcuts,
+    type CartLine,
+    type CategoryOption,
     type CheckoutDraftSnapshot,
     type Customer,
+    type PosVersions,
     type Product,
     type ProductUnit,
     type SaleReceipt,
@@ -47,9 +52,29 @@ type PosProps = {
     expiryAlerts: number;
     canManageCatalog: boolean;
     latestReceipt: SaleReceipt | null;
+    versions: PosVersions;
+    snapshotScope: { organizationId: number; branchId: number };
 };
 
-export default function PosPage({ catalog, categories, customers, activeShift, registers, expiryAlerts, canManageCatalog, latestReceipt }: PosProps) {
+export default function PosPage({
+    catalog,
+    categories,
+    customers,
+    activeShift,
+    registers,
+    expiryAlerts,
+    canManageCatalog,
+    latestReceipt,
+    versions,
+    snapshotScope,
+}: PosProps) {
+    const [currentCatalog, setCurrentCatalog] = useState<Product[]>(catalog);
+    const [currentCategories, setCurrentCategories] = useState<CategoryOption[]>(categories);
+    const [currentCustomers, setCurrentCustomers] = useState<Customer[]>(customers);
+    const [currentActiveShift, setCurrentActiveShift] = useState<Shift | null>(activeShift);
+    const [currentExpiryAlerts, setCurrentExpiryAlerts] = useState(expiryAlerts);
+    const [currentVersions, setCurrentVersions] = useState<PosVersions>(versions);
+    const scopeKey = `${snapshotScope.organizationId}:${snapshotScope.branchId}`;
     const [query, setQuery] = useState('');
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
@@ -64,14 +89,25 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
     const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
     const [syncCenterOpen, setSyncCenterOpen] = useState(false);
-    const [undoCart, setUndoCart] = useState<ReturnType<typeof usePosCarts>['cart']>([]);
+    const [undoCart, setUndoCart] = useState<CartLine[]>([]);
     const searchRef = useRef<HTMLInputElement>(null);
     const checkoutRef = useRef<HTMLDivElement>(null);
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
     const openShiftForm = useForm({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
-    useEffect(() => setCustomerOptions(customers), [customers]);
+    useEffect(() => {
+        setCurrentCatalog(catalog);
+        setCurrentCategories(categories);
+        setCurrentCustomers(customers);
+        setCurrentExpiryAlerts(expiryAlerts);
+        setCurrentVersions(versions);
+        setStoredReceipt(latestReceipt);
+    }, [catalog, categories, customers, expiryAlerts, latestReceipt, versions]);
+    useEffect(() => {
+        setCurrentActiveShift(activeShift);
+    }, [activeShift]);
+    useEffect(() => setCustomerOptions(currentCustomers), [currentCustomers]);
     usePoll(30000, { only: ['activeShift'] }, { keepAlive: true });
-    useEffect(() => setOpenShiftOpen(!activeShift), [activeShift]);
+    useEffect(() => setOpenShiftOpen(!currentActiveShift), [currentActiveShift]);
     const {
         cart,
         selectedKey,
@@ -91,32 +127,126 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         switchCart,
         renameCart,
         deleteCart,
-    } = usePosCarts();
+    } = usePosCarts(scopeKey);
     const hasStaleCartPrice = useMemo(
         () =>
             cart.some(
                 (line) =>
-                    catalog
+                    currentCatalog
                         .find((item) => item.id === line.product.id)
                         ?.variants.flatMap((variant) => variant.units)
                         .find((unit) => unit.id === line.productUnit.id)?.sale_price !== line.productUnit.sale_price,
             ),
-        [cart, catalog],
+        [cart, currentCatalog],
     );
-    const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(catalog, query, categoryId);
+    const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(currentCatalog, query, categoryId);
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
-    const { online, pendingCount, records, refreshPending, syncNow, retry } = useConnectivity(catalog, onSync);
+    const refreshPosResources = useCallback(async (resources: string[]) => {
+        const snapshot = await getPosSnapshot(resources);
+        if (snapshot.catalog) setCurrentCatalog(snapshot.catalog);
+        if (snapshot.categories) setCurrentCategories(snapshot.categories);
+        if (snapshot.customers) {
+            setCurrentCustomers(snapshot.customers);
+            setCustomerOptions(snapshot.customers);
+        }
+        if (snapshot.activeShift !== undefined) setCurrentActiveShift(snapshot.activeShift);
+        if (snapshot.expiryAlerts !== undefined) setCurrentExpiryAlerts(snapshot.expiryAlerts);
+        if (snapshot.latestReceipt !== undefined && snapshot.latestReceipt) setStoredReceipt(snapshot.latestReceipt);
+        setCurrentVersions(snapshot.versions);
+
+        return snapshot;
+    }, []);
+    const refreshAfterSale = useCallback(
+        () => refreshPosResources(['catalog', 'categories', 'customers', 'expiryAlerts']).then(() => undefined),
+        [refreshPosResources],
+    );
+    const refreshAfterSync = useCallback(
+        () => refreshPosResources(['catalog', 'categories', 'customers', 'expiryAlerts', 'latestReceipt']).then(() => undefined),
+        [refreshPosResources],
+    );
+    const refreshCatalogForReprice = useCallback(async () => {
+        const snapshot = await refreshPosResources(['catalog']);
+
+        return snapshot.catalog ?? currentCatalog;
+    }, [currentCatalog, refreshPosResources]);
+    const onCacheError = useCallback(() => setMessage('Không thể lưu snapshot catalog offline; dữ liệu trong phiên bán vẫn được giữ nguyên.'), []);
+    const ensureCheckoutDataFresh = useCallback(
+        async (selectedCustomerId: number | null) => {
+            const freshness = await getPosFreshness(currentVersions);
+            const resources = new Set<string>();
+            if (freshness.changed.includes('catalog') || freshness.changed.includes('inventory')) {
+                resources.add('catalog');
+                resources.add('categories');
+            }
+            if (freshness.changed.includes('customers')) resources.add('customers');
+            if (freshness.changed.includes('activeShift')) resources.add('activeShift');
+            if (freshness.changed.includes('inventory')) resources.add('expiryAlerts');
+
+            let freshCatalog = currentCatalog;
+            let freshCustomers = currentCustomers;
+            let freshShift = currentActiveShift;
+            if (resources.size) {
+                const snapshot = await refreshPosResources([...resources]);
+                freshCatalog = snapshot.catalog ?? freshCatalog;
+                freshCustomers = snapshot.customers ?? freshCustomers;
+                freshShift = snapshot.activeShift !== undefined ? snapshot.activeShift : freshShift;
+            }
+
+            if (!freshShift || (currentActiveShift && freshShift.id !== currentActiveShift.id)) {
+                throw new Error('Ca bán đã thay đổi hoặc đã đóng. Hãy mở/chọn ca hợp lệ rồi thử lại.');
+            }
+            if (selectedCustomerId && !freshCustomers.some((customer) => customer.id === selectedCustomerId && customer.is_active !== false)) {
+                throw new Error('Khách hàng đã ngừng sử dụng hoặc không còn hợp lệ. Hãy chọn lại khách hàng.');
+            }
+            for (const line of cart) {
+                const freshUnit = freshCatalog
+                    .flatMap((product) => product.variants.flatMap((variant) => variant.units.map((unit) => ({ product, variant, unit }))))
+                    .find(({ unit }) => unit.id === line.productUnit.id);
+                if (!freshUnit) {
+                    throw new Error(`Sản phẩm ${line.product.name} không còn khả dụng. Hãy xóa dòng hàng và chọn sản phẩm khác.`);
+                }
+            }
+
+            return { activeShift: freshShift, catalog: freshCatalog };
+        },
+        [cart, currentActiveShift, currentCatalog, currentCustomers, currentVersions, refreshPosResources],
+    );
+    const { online, pendingCount, records, refreshPending, syncNow, retry, reprice } = useConnectivity({
+        catalog: currentCatalog,
+        categories: currentCategories,
+        scope: snapshotScope,
+        versions: currentVersions,
+        onSync,
+        onReconnect: refreshAfterSync,
+        onRefreshCatalog: refreshCatalogForReprice,
+        onCacheError,
+    });
+    const handleReprice = useCallback(
+        async (idempotencyKey: string) => {
+            try {
+                const result = await reprice(idempotencyKey);
+                setMessage(
+                    result === 'repriced'
+                        ? 'Đã cập nhật giá hiện tại cho hóa đơn. Hãy kiểm tra lại rồi bấm Đồng bộ ngay.'
+                        : 'Không thể tự cập nhật giá cho conflict này; hãy xuất recovery JSON để xử lý thủ công.',
+                );
+            } catch {
+                setMessage('Không thể tải catalog hiện tại. Hãy kiểm tra kết nối rồi thử lại.');
+            }
+        },
+        [reprice],
+    );
     useEffect(() => {
-        void getLastReceipt()
+        void getLastReceipt(scopeKey)
             .then((savedReceipt) => {
                 if (savedReceipt) setStoredReceipt(savedReceipt);
             })
             .catch(() => undefined);
-    }, []);
+    }, [scopeKey]);
 
     useEffect(() => {
         const refreshStoredReceipt = () => {
-            void getLastReceipt()
+            void getLastReceipt(scopeKey)
                 .then((savedReceipt) => {
                     if (savedReceipt) setStoredReceipt(savedReceipt);
                 })
@@ -125,16 +255,16 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
 
         window.addEventListener('pos:receipt-updated', refreshStoredReceipt);
         return () => window.removeEventListener('pos:receipt-updated', refreshStoredReceipt);
-    }, []);
+    }, [scopeKey]);
     const handleExportRecovery = useCallback(async () => {
-        const blob = new Blob([await exportPendingSales()], { type: 'application/json' });
+        const blob = new Blob([await exportPendingSales(scopeKey)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
         anchor.download = `marthub-pos-recovery-${new Date().toISOString().slice(0, 10)}.json`;
         anchor.click();
         URL.revokeObjectURL(url);
-    }, []);
+    }, [scopeKey]);
     const requestClearCart = useCallback(() => {
         if (cart.length) setClearDialogOpen(true);
     }, [cart.length]);
@@ -150,24 +280,31 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
         setUndoCart([]);
         setMessage(null);
     }, [replaceCart, undoCart]);
-    const handleSaleSuccess = useCallback((saleReceipt: SaleReceipt) => {
-        setReceipt(saleReceipt);
-        setStoredReceipt(saleReceipt);
-        void saveLastReceipt(saleReceipt)
-            .then(() => window.dispatchEvent(new Event('pos:receipt-updated')))
-            .catch(() => undefined);
-        setReceiptPreviewOpen(false);
-        window.setTimeout(() => searchRef.current?.focus(), 0);
-    }, []);
+    const handleSaleSuccess = useCallback(
+        (saleReceipt: SaleReceipt) => {
+            setReceipt(saleReceipt);
+            setStoredReceipt(saleReceipt);
+            void saveLastReceipt(saleReceipt, scopeKey)
+                .then(() => window.dispatchEvent(new Event('pos:receipt-updated')))
+                .catch(() => undefined);
+            setReceiptPreviewOpen(false);
+            window.setTimeout(() => searchRef.current?.focus(), 0);
+        },
+        [scopeKey],
+    );
     const checkout = usePosCheckout({
         cart,
-        activeShift,
+        catalog: currentCatalog,
+        scopeKey,
+        activeShift: currentActiveShift,
         online,
         customers: customerOptions,
         clearCart,
         refreshPending,
         onMessage: setMessage,
         onSuccess: handleSaleSuccess,
+        ensureFresh: ensureCheckoutDataFresh,
+        refreshAfterSale,
     });
     const { restoreDraft } = checkout;
     const handleQuickCustomerCreated = useCallback(
@@ -294,8 +431,8 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 <PosStatusBar
                     online={online}
                     pendingCount={pendingCount}
-                    activeShift={activeShift}
-                    expiryAlerts={expiryAlerts}
+                    activeShift={currentActiveShift}
+                    expiryAlerts={currentExpiryAlerts}
                     onOpenSync={() => setSyncCenterOpen(true)}
                     hasLatestReceipt={Boolean(storedReceipt)}
                     onOpenLatestReceipt={() => setReceiptPreviewOpen(true)}
@@ -328,7 +465,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 )}
                 <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
-                        categories={categories}
+                        categories={currentCategories}
                         query={query}
                         categoryId={categoryId}
                         products={products}
@@ -366,7 +503,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                             checkoutRef={checkoutRef}
                             confirmRef={confirmCheckoutRef}
                             searchRef={searchRef}
-                            activeShift={activeShift !== null}
+                            activeShift={currentActiveShift !== null}
                             online={online}
                             customers={customerOptions}
                             {...checkout}
@@ -385,7 +522,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
             </div>
             <OpenShiftDialog
                 open={openShiftOpen}
-                required={!activeShift}
+                required={!currentActiveShift}
                 onOpenChange={setOpenShiftOpen}
                 registers={registers}
                 form={openShiftForm}
@@ -404,6 +541,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
                 records={records}
                 onSync={() => void syncNow()}
                 onRetry={(key) => void retry(key)}
+                onReprice={(key) => void handleReprice(key)}
                 onExport={() => void handleExportRecovery()}
             />
             {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} />}
@@ -436,7 +574,7 @@ export default function PosPage({ catalog, categories, customers, activeShift, r
             <ProductQuickEditSheet
                 product={quickEditProduct}
                 unitId={quickEditUnitId}
-                categories={categories}
+                categories={currentCategories}
                 open={Boolean(quickEditProduct)}
                 onOpenChange={(open) => {
                     if (!open) {

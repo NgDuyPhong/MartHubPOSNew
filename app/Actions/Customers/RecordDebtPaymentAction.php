@@ -8,11 +8,14 @@ use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class RecordDebtPaymentAction
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function execute(User $user, Customer $customer, array $data): Payment
     {
         return DB::transaction(function () use ($user, $customer, $data) {
@@ -50,6 +53,7 @@ class RecordDebtPaymentAction
                 'note' => $data['note'] ?? 'Thu công nợ',
             ]);
             PaymentAllocation::query()->create(['payment_id' => $payment->id, 'customer_credit_entry_id' => $credit->id, 'amount' => $data['amount']]);
+            $this->resourceVersions->bumpAfterCommit($user, ['customers']);
 
             return $payment;
         }, 3);

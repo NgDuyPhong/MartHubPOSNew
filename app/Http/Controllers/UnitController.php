@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUnitRequest;
 use App\Models\Unit;
+use App\Services\ResourceVersionService;
 use App\Support\VietnameseSearch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UnitController extends Controller
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function index(Request $request): Response
     {
         $organizationId = $request->user()->organization_id;
@@ -48,7 +52,13 @@ class UnitController extends Controller
         abort_unless($unit->organization_id === $request->user()->organization_id, 403);
         $data = $request->validated();
         abort_if(($data['is_active'] ?? true) === false && $unit->is_active && $unit->productUnits()->exists(), 409, 'Đơn vị đang được sản phẩm sử dụng. Hãy chuyển sản phẩm sang đơn vị khác trước khi ngừng sử dụng.');
-        $unit->update($data);
+        DB::transaction(function () use ($unit, $data, $request): void {
+            $affectsCatalog = $unit->productUnits()->exists();
+            $unit->update($data);
+            if ($affectsCatalog) {
+                $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+            }
+        });
 
         return back()->with('success', 'Đã cập nhật đơn vị.');
     }

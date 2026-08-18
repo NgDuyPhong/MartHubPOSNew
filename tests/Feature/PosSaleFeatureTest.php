@@ -9,6 +9,7 @@ use App\Models\Register;
 use App\Models\Shift;
 use App\Models\Unit;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 function saleFixture(bool $allowsFractional = false): array
@@ -54,4 +55,38 @@ test('fractional quantity is accepted when the unit policy allows it', function 
 
     $response->assertCreated();
     expect($response->json('sale.items.0.quantity'))->toBe('1.500000');
+});
+
+test('sale keeps the cart price snapshot when the master price changed', function () {
+    $fixture = saleFixture();
+    $fixture['user']->update(['approval_pin_hash' => Hash::make('1234')]);
+    $fixture['productUnit']->update(['sale_price' => 12000]);
+
+    $response = $this->actingAs($fixture['user'])->postJson(route('sales.store'), [
+        'idempotency_key' => (string) Str::uuid(),
+        'shift_id' => $fixture['shift']->id,
+        'source' => 'online',
+        'owner_pin' => '1234',
+        'items' => [['product_unit_id' => $fixture['productUnit']->id, 'quantity' => 1, 'unit_price' => 10000]],
+        'payments' => [['method' => 'cash', 'amount' => 10000]],
+    ]);
+
+    $response->assertCreated()->assertJsonPath('sale.items.0.unit_price', 10000)->assertJsonPath('sale.items.0.original_unit_price', 12000);
+});
+
+test('offline sale with a stale price is rejected until it is repriced online', function () {
+    $fixture = saleFixture();
+    $fixture['productUnit']->update(['sale_price' => 12000]);
+
+    $response = $this->actingAs($fixture['user'])->postJson(route('sales.store'), [
+        'idempotency_key' => (string) Str::uuid(),
+        'shift_id' => $fixture['shift']->id,
+        'source' => 'offline_sync',
+        'occurred_at' => now()->toISOString(),
+        'items' => [['product_unit_id' => $fixture['productUnit']->id, 'quantity' => 1, 'unit_price' => 10000]],
+        'payments' => [['method' => 'cash', 'amount' => 10000]],
+    ]);
+
+    $response->assertUnprocessable()->assertJsonValidationErrors('owner_pin');
+    expect($fixture['shift']->sales()->count())->toBe(0);
 });

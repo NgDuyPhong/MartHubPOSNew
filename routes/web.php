@@ -19,6 +19,8 @@ Route::get('/', fn () => redirect()->route('dashboard'))->name('home');
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', RetailDashboardController::class)->name('dashboard');
     Route::get('pos', PosController::class)->name('pos');
+    Route::get('pos/freshness', [PosController::class, 'freshness'])->name('pos.freshness');
+    Route::get('pos/snapshot', [PosController::class, 'snapshot'])->name('pos.snapshot');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');

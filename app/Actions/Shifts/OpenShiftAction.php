@@ -6,11 +6,14 @@ use App\Models\Register;
 use App\Models\Shift;
 use App\Models\ShiftParticipant;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OpenShiftAction
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function execute(User $user, array $data): Shift
     {
         return DB::transaction(function () use ($user, $data) {
@@ -29,6 +32,7 @@ class OpenShiftAction
             ]);
 
             ShiftParticipant::query()->create(['shift_id' => $shift->id, 'user_id' => $user->id, 'joined_at' => now()]);
+            $this->resourceVersions->bumpAfterCommit($user, ['activeShift']);
 
             return $shift;
         });

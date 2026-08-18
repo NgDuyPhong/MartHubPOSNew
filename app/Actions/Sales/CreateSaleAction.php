@@ -14,6 +14,7 @@ use App\Models\Sale;
 use App\Models\Shift;
 use App\Models\User;
 use App\Services\OwnerApprovalService;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,6 +25,7 @@ class CreateSaleAction
     public function __construct(
         private readonly AdjustInventoryAction $adjustInventory,
         private readonly OwnerApprovalService $ownerApproval,
+        private readonly ResourceVersionService $resourceVersions,
     ) {}
 
     public function execute(User $user, array $data): Sale
@@ -214,6 +216,7 @@ class CreateSaleAction
             }
 
             IdempotencyRecord::query()->create(['organization_id' => $user->organization_id, 'key' => $data['idempotency_key'], 'operation' => 'create_sale', 'request_hash' => $requestHash, 'response_status' => 201, 'response_body' => ['sale_id' => $sale->id], 'expires_at' => now()->addDays(30)]);
+            $this->resourceVersions->bumpAfterCommit($user, $debtAmount > 0 ? ['inventory', 'customers'] : ['inventory']);
 
             return $sale->load(['items', 'payments', 'customer']);
         }, 3);

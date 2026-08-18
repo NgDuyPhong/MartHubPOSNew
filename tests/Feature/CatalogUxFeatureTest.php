@@ -105,6 +105,17 @@ test('customer search is accent-insensitive and debt filter is server-side', fun
     $this->actingAs($owner)->get('/customers?search=nguyen&debt=with_debt')->assertInertia(fn ($page) => $page->where('customers.total', 1));
 });
 
+test('products default to active status filter', function () {
+    [$organization, , $owner] = catalogUser();
+    catalogProduct($organization->id, 'Active product');
+    [$inactiveProduct] = catalogProduct($organization->id, 'Inactive product');
+    $inactiveProduct->update(['is_active' => false]);
+
+    $this->actingAs($owner)->get(route('products.index'))->assertInertia(fn ($page) => $page
+        ->where('filters.status', 'active')
+        ->where('products.total', 1));
+});
+
 test('quick customer creation returns a customer ready for POS selection', function () {
     [$organization, , $owner] = catalogUser();
 

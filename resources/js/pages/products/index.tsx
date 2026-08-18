@@ -64,7 +64,11 @@ export default function ProductsPage({
         ],
     });
     const form = useForm<ProductFormData>(initialData());
-    const { query, update, reset } = useListQuery<ProductFilters>(route('products.index'), { ...filters, page: 1 });
+    const { query, update, reset } = useListQuery<ProductFilters>(route('products.index'), {
+        ...filters,
+        status: filters.status || 'active',
+        page: 1,
+    });
     const submit = (event: FormEvent) => {
         event.preventDefault();
         if (!hasValidBaseUnit(form.data.units)) {

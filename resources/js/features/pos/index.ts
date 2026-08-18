@@ -1,6 +1,6 @@
 export { getCartDrafts, saveCartDrafts } from './api/cart-draft-repository';
+export { cacheCatalog, clearCachedCatalogScope, getCachedCatalog } from './api/catalog-cache-repository';
 export { createQuickCustomer } from './api/customer-api';
-export { cacheCatalog } from './api/catalog-cache-repository';
 export {
     exportPendingSales,
     getLastReceipt,
@@ -13,7 +13,7 @@ export {
     type PendingSaleStatus,
 } from './api/offline-sale-repository';
 export { syncPendingSales } from './api/offline-sale-sync';
-export { createSale } from './api/pos-api';
+export { createSale, getPosFreshness, getPosSnapshot } from './api/pos-api';
 export { useCatalogSearch } from './hooks/use-catalog-search';
 export { useConnectivity } from './hooks/use-connectivity';
 export { usePosCart } from './hooks/use-pos-cart';
@@ -28,14 +28,18 @@ export {
     findBarcodeMatch,
     findBarcodeMatchWithIndex,
     getDefaultSellableSelection,
+    hasStalePriceOverride,
     requiresOwnerOverride,
 } from './model/selectors';
 export type {
     CartDraft,
     CartLine,
     CartTotals,
+    CategoryOption,
     CheckoutDraftSnapshot,
     Customer,
+    PosSnapshot,
+    PosVersions,
     Product,
     ProductUnit,
     SaleReceipt,

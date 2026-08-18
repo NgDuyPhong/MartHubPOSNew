@@ -7,12 +7,16 @@ use App\Models\InventoryLot;
 use App\Models\ProductUnit;
 use App\Models\StockReceipt;
 use App\Models\User;
+use App\Services\ResourceVersionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CreateStockReceiptAction
 {
-    public function __construct(private readonly AdjustInventoryAction $adjustInventory) {}
+    public function __construct(
+        private readonly AdjustInventoryAction $adjustInventory,
+        private readonly ResourceVersionService $resourceVersions,
+    ) {}
 
     public function execute(User $user, array $data): StockReceipt
     {
@@ -69,6 +73,7 @@ class CreateStockReceiptAction
                     $this->adjustInventory->execute($user->branch_id, $productUnit->product_variant_id, $quantityBase, 'lot_stock_in', $user, $lot->id, StockReceipt::class, $receipt->id);
                 }
             }
+            $this->resourceVersions->bumpAfterCommit($user, ['catalog', 'inventory']);
 
             return $receipt->load('items');
         }, 3);

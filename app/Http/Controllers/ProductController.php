@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\Unit;
+use App\Services\ResourceVersionService;
 use App\Support\VietnameseSearch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,13 +21,15 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function index(Request $request): Response
     {
         $organizationId = $request->user()->organization_id;
         $search = trim((string) $request->string('search'));
         $normalizedSearch = VietnameseSearch::normalize($search);
         $categoryId = $request->integer('category_id') ?: null;
-        $status = $request->string('status')->toString() ?: 'all';
+        $status = $request->string('status')->toString() ?: 'active';
         $sort = $request->string('sort')->toString() ?: 'latest';
         $direction = $request->string('direction')->toString() === 'asc' ? 'asc' : 'desc';
         $perPage = in_array($request->integer('per_page'), config('ux.pagination.options'), true)
@@ -103,6 +106,7 @@ class ProductController extends Controller
                 'status' => 'approved',
                 'context' => ['source' => 'pos_quick_edit', 'before' => $before, 'after' => ['name' => $product->name, 'category_id' => $product->category_id, 'sale_price' => $productUnit->sale_price]],
             ]);
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
         });
 
         return back()->with('success', 'Đã cập nhật nhanh sản phẩm.');
@@ -137,6 +141,7 @@ class ProductController extends Controller
                     Barcode::query()->create(['product_unit_id' => $productUnit->id, 'value' => $unitData['barcode'], 'is_primary' => true]);
                 }
             }
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
         });
 
         return back()->with('success', 'Đã tạo sản phẩm và quy cách bán.');
@@ -184,6 +189,7 @@ class ProductController extends Controller
                 }
             }
             $variant->units()->whereNotIn('id', $keptIds)->update(['is_active' => false, 'is_base' => false, 'is_default_sale' => false]);
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
         });
 
         return back()->with('success', 'Đã cập nhật sản phẩm và quy cách bán.');

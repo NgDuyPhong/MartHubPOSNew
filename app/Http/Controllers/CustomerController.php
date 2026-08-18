@@ -8,15 +8,19 @@ use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Customer;
 use App\Models\Shift;
+use App\Services\ResourceVersionService;
 use App\Support\VietnameseSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CustomerController extends Controller
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function index(Request $request): Response
     {
         $search = trim((string) $request->string('search'));
@@ -64,7 +68,10 @@ class CustomerController extends Controller
     public function update(StoreCustomerRequest $request, Customer $customer): RedirectResponse
     {
         abort_unless($customer->organization_id === $request->user()->organization_id, 403);
-        $customer->update($request->validated());
+        DB::transaction(function () use ($customer, $request): void {
+            $customer->update($request->validated());
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['customers']);
+        });
 
         return back()->with('success', 'Đã cập nhật khách hàng.');
     }

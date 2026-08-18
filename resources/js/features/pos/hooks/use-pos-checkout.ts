@@ -2,8 +2,8 @@ import { firstValidationMessage } from '@/lib/http/errors';
 import { useEffect, useMemo, useState } from 'react';
 import { queueSale } from '../api/offline-sale-repository';
 import { createSale, type SalePayload } from '../api/pos-api';
-import { calculateCartTotals, requiresOwnerOverride } from '../model/selectors';
-import type { CartLine, CheckoutDraftSnapshot, Customer, SaleReceipt, Shift } from '../model/types';
+import { calculateCartTotals, hasStalePriceOverride, requiresOwnerOverride } from '../model/selectors';
+import type { CartLine, CheckoutDraftSnapshot, Customer, Product, SaleReceipt, Shift } from '../model/types';
 import type { CheckoutErrors } from '../model/validation';
 import { validateCheckout } from '../model/validation';
 
@@ -39,6 +39,8 @@ function buildOfflineReceipt(payload: SalePayload, cart: CartLine[], totals: Ret
 
 type CheckoutOptions = {
     cart: CartLine[];
+    catalog: Product[];
+    scopeKey: string;
     activeShift: Shift | null;
     online: boolean;
     customers: Customer[];
@@ -46,6 +48,8 @@ type CheckoutOptions = {
     refreshPending: () => Promise<void>;
     onMessage: (message: string | null) => void;
     onSuccess: (receipt: SaleReceipt) => void;
+    ensureFresh?: (customerId: number | null) => Promise<{ activeShift: Shift | null; catalog: Product[] } | undefined>;
+    refreshAfterSale?: () => Promise<void>;
 };
 
 export function usePosCheckout(options: CheckoutOptions) {
@@ -58,7 +62,10 @@ export function usePosCheckout(options: CheckoutOptions) {
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<CheckoutErrors>({});
     const totals = useMemo(() => calculateCartTotals(options.cart, cash, qr), [options.cart, cash, qr]);
-    const overrideNeeded = useMemo(() => requiresOwnerOverride(options.cart), [options.cart]);
+    const overrideNeeded = useMemo(
+        () => requiresOwnerOverride(options.cart) || hasStalePriceOverride(options.cart, options.catalog),
+        [options.cart, options.catalog],
+    );
 
     useEffect(() => {
         setErrors({});
@@ -79,20 +86,23 @@ export function usePosCheckout(options: CheckoutOptions) {
         setErrors(validationErrors);
         const firstError = Object.values(validationErrors)[0];
 
-        if (!options.activeShift || firstError) {
+        if (firstError || (!options.online && !options.activeShift)) {
             options.onMessage(firstError ?? 'Cần mở ca trước khi thanh toán.');
             return;
         }
 
-        const payload: SalePayload = {
+        setProcessing(true);
+        options.onMessage(null);
+        let activeShift = options.activeShift;
+        const makePayload = (shift: Shift): SalePayload => ({
             idempotency_key: crypto.randomUUID(),
-            shift_id: options.activeShift.id,
+            shift_id: shift.id,
             customer_id: customerId,
             source: options.online ? 'online' : 'offline_sync',
             items: options.cart.map((line) => ({
                 product_unit_id: line.productUnit.id,
                 quantity: line.quantity,
-                ...(line.unitPrice !== line.productUnit.sale_price ? { unit_price: line.unitPrice } : {}),
+                unit_price: line.unitPrice,
                 ...(line.discount ? { discount_amount: line.discount } : {}),
             })),
             payments: [
@@ -102,22 +112,42 @@ export function usePosCheckout(options: CheckoutOptions) {
             occurred_at: new Date().toISOString(),
             queued_at: new Date().toISOString(),
             ...(ownerPin ? { owner_pin: ownerPin } : {}),
-        };
-
-        setProcessing(true);
-        options.onMessage(null);
+        });
+        let payload: SalePayload | null = options.activeShift ? makePayload(options.activeShift) : null;
         try {
+            let freshCatalog = options.catalog;
+            if (options.online) {
+                const freshData = await options.ensureFresh?.(customerId);
+                activeShift = freshData ? freshData.activeShift : activeShift;
+                freshCatalog = freshData?.catalog ?? freshCatalog;
+            }
+            const freshOverrideNeeded = requiresOwnerOverride(options.cart) || hasStalePriceOverride(options.cart, freshCatalog);
+            if (freshOverrideNeeded && !ownerPin) {
+                options.onMessage('Giá hiện tại đã thay đổi hoặc dòng hàng có sửa giá. Hãy nhập PIN chủ cửa hàng rồi thử lại.');
+                return;
+            }
+            if (!activeShift) {
+                options.onMessage('Cần mở ca trước khi thanh toán.');
+                return;
+            }
+            if (!payload || payload.shift_id !== activeShift.id) payload = makePayload(activeShift);
             const receipt = await createSale(payload);
             options.onSuccess(receipt);
+            if (options.refreshAfterSale) void options.refreshAfterSale().catch(() => undefined);
             reset();
         } catch (error) {
-            if ((!navigator.onLine || error instanceof TypeError) && !overrideNeeded) {
+            if (payload && (!navigator.onLine || error instanceof TypeError) && !overrideNeeded) {
+                const offlineShift = activeShift ?? options.activeShift;
+                if (!offlineShift) {
+                    options.onMessage('Cần mở ca trước khi thanh toán.');
+                    return;
+                }
                 const offlinePayload = { ...payload, source: 'offline_sync' as const };
                 delete offlinePayload.owner_pin;
                 try {
-                    await queueSale(offlinePayload);
+                    await queueSale(offlinePayload, options.scopeKey);
                     await options.refreshPending();
-                    options.onSuccess(buildOfflineReceipt(offlinePayload, options.cart, totals, options.activeShift));
+                    options.onSuccess(buildOfflineReceipt(offlinePayload, options.cart, totals, offlineShift));
                     reset();
                     options.onMessage('Đã lưu hóa đơn offline; hệ thống sẽ tự đồng bộ khi có mạng.');
                 } catch {

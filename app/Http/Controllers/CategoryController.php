@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCategoryRequest;
 use App\Models\Category;
+use App\Services\ResourceVersionService;
 use App\Support\VietnameseSearch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CategoryController extends Controller
 {
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     public function index(Request $request): Response
     {
         $organizationId = $request->user()->organization_id;
@@ -44,11 +48,14 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        Category::query()->create([
-            ...$data,
-            'organization_id' => $request->user()->organization_id,
-            'code' => $data['code'] ?: str($data['name'])->slug('-')->toString(),
-        ]);
+        DB::transaction(function () use ($data, $request): void {
+            Category::query()->create([
+                ...$data,
+                'organization_id' => $request->user()->organization_id,
+                'code' => $data['code'] ?: str($data['name'])->slug('-')->toString(),
+            ]);
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+        });
 
         return back()->with('success', 'Đã tạo danh mục.');
     }
@@ -58,7 +65,10 @@ class CategoryController extends Controller
         abort_unless($category->organization_id === $request->user()->organization_id, 403);
         $data = $request->validated();
         abort_if(($data['is_active'] ?? true) === false && $category->children()->where('is_active', true)->exists(), 409, 'Hãy ngừng sử dụng danh mục con trước khi ngừng danh mục cha.');
-        $category->update($data);
+        DB::transaction(function () use ($category, $data, $request): void {
+            $category->update($data);
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+        });
 
         return back()->with('success', 'Đã cập nhật danh mục.');
     }
@@ -67,7 +77,10 @@ class CategoryController extends Controller
     {
         abort_unless($category->organization_id === $request->user()->organization_id && $request->user()->canManageCatalog(), 403);
         abort_if($category->products()->exists() || $category->children()->exists(), 409, 'Danh mục đang được sử dụng. Hãy ngừng sử dụng thay vì xóa.');
-        $category->delete();
+        DB::transaction(function () use ($category, $request): void {
+            $category->delete();
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+        });
 
         return back()->with('success', 'Đã xóa danh mục.');
     }

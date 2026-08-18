@@ -34,6 +34,8 @@ class LegacyImportService
         'data/inventory.ndjson',
     ];
 
+    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+
     /**
      * @param  array{organization_id?: ?int, branch_id?: ?int, execute?: bool, force?: bool}  $options
      * @return array<string, mixed>
@@ -79,6 +81,7 @@ class LegacyImportService
             $maps = [];
             DB::beginTransaction();
             $transactionStarted = true;
+            DB::afterCommit(fn () => $this->resourceVersions->bump(['catalog', 'inventory'], $organization->id, $branch->id));
 
             $this->processRows($temporaryDirectory, 'categories.ndjson', 'Category', $sourceSystem, $maps, $counts, $errors, function (array $row) use ($organization): array {
                 $name = trim((string) ($row['name'] ?? ''));

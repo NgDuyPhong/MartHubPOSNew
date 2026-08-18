@@ -1,23 +1,7 @@
 import type { CartDraft, CartLine, CheckoutDraftSnapshot } from '../model/types';
+import { openPosDatabase, POS_STORES } from './pos-database';
 
-const DB_NAME = 'marthub-pos';
-const DB_VERSION = 3;
-const DRAFTS_STORE = 'cart-drafts';
-
-function openDatabase(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = () => {
-            const db = request.result;
-            if (!db.objectStoreNames.contains('pending-sales')) db.createObjectStore('pending-sales', { keyPath: 'idempotency_key' });
-            if (!db.objectStoreNames.contains(DRAFTS_STORE)) db.createObjectStore(DRAFTS_STORE, { keyPath: 'id' });
-            if (!db.objectStoreNames.contains('metadata')) db.createObjectStore('metadata', { keyPath: 'id' });
-            if (!db.objectStoreNames.contains('catalog')) db.createObjectStore('catalog');
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
+const DRAFTS_STORE = POS_STORES.cartDrafts;
 
 function isCheckoutSnapshot(value: unknown): value is CheckoutDraftSnapshot {
     if (!value || typeof value !== 'object') return false;
@@ -67,17 +51,22 @@ function normalizeDraft(value: unknown): CartDraft | null {
         checkout: draft.checkout,
         active: Boolean(draft.active),
         updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date(0).toISOString(),
+        scope_key: typeof draft.scope_key === 'string' ? draft.scope_key : undefined,
     };
 }
 
-export async function getCartDrafts(): Promise<CartDraft[]> {
-    const db = await openDatabase();
+export async function getCartDrafts(scopeKey: string): Promise<CartDraft[]> {
+    const db = await openPosDatabase();
 
     return new Promise((resolve, reject) => {
         const request = db.transaction(DRAFTS_STORE, 'readonly').objectStore(DRAFTS_STORE).getAll();
         request.onsuccess = () => {
             db.close();
-            resolve((request.result as unknown[]).map(normalizeDraft).filter((draft): draft is CartDraft => draft !== null));
+            resolve(
+                (request.result as unknown[])
+                    .map(normalizeDraft)
+                    .filter((draft): draft is CartDraft => draft !== null && draft.scope_key === scopeKey),
+            );
         };
         request.onerror = () => {
             db.close();
@@ -86,14 +75,21 @@ export async function getCartDrafts(): Promise<CartDraft[]> {
     });
 }
 
-export async function saveCartDrafts(drafts: CartDraft[]): Promise<void> {
-    const db = await openDatabase();
+export async function saveCartDrafts(drafts: CartDraft[], scopeKey: string): Promise<void> {
+    const db = await openPosDatabase();
 
     await new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(DRAFTS_STORE, 'readwrite');
         const store = transaction.objectStore(DRAFTS_STORE);
-        store.clear();
-        drafts.forEach((draft) => store.put(draft));
+        const request = store.getAll();
+        request.onsuccess = () => {
+            (request.result as unknown[]).forEach((value) => {
+                const draft = normalizeDraft(value);
+                if (draft?.scope_key === scopeKey) store.delete(draft.id);
+            });
+            drafts.forEach((draft) => store.put({ ...draft, scope_key: scopeKey }));
+        };
+        request.onerror = () => transaction.abort();
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error);

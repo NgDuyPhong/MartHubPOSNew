@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertTriangle, CheckCircle2, Download, LoaderCircle, RefreshCw, WifiOff } from 'lucide-react';
-import type { PendingSale } from '../api/offline-sale-repository';
+import { PRICE_REPRICE_REQUIRED_CODE, type PendingSale } from '../api/offline-sale-repository';
 
 const statusLabels = { pending: 'Đang chờ', syncing: 'Đang đồng bộ', failed: 'Có thể thử lại', conflict: 'Cần xử lý' } as const;
 
@@ -12,6 +12,7 @@ export function SyncCenter({
     records,
     onSync,
     onRetry,
+    onReprice,
     onExport,
 }: {
     open: boolean;
@@ -20,6 +21,7 @@ export function SyncCenter({
     records: PendingSale[];
     onSync: () => void;
     onRetry: (idempotencyKey: string) => void;
+    onReprice: (idempotencyKey: string) => void;
     onExport: () => void;
 }) {
     return (
@@ -53,14 +55,27 @@ export function SyncCenter({
                                         {record.idempotency_key} · lần thử {record.attempts}
                                     </p>
                                     {record.last_error_message && <p className="text-destructive mt-1 text-xs">{record.last_error_message}</p>}
+                                    {record.last_error_code === PRICE_REPRICE_REQUIRED_CODE && (
+                                        <p className="text-warning-foreground mt-1 text-xs">
+                                            Giá master đã thay đổi. Cần cập nhật giá hiện tại online trước khi đồng bộ.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                            {record.status === 'failed' && online && (
-                                <Button size="sm" variant="outline" onClick={() => onRetry(record.idempotency_key)}>
-                                    <RefreshCw className="mr-1 size-3" />
-                                    Thử lại
-                                </Button>
-                            )}
+                            <div className="flex shrink-0 flex-col gap-2">
+                                {record.status === 'failed' && online && (
+                                    <Button size="sm" variant="outline" onClick={() => onRetry(record.idempotency_key)}>
+                                        <RefreshCw className="mr-1 size-3" />
+                                        Thử lại
+                                    </Button>
+                                )}
+                                {record.status === 'conflict' && record.last_error_code === PRICE_REPRICE_REQUIRED_CODE && online && (
+                                    <Button size="sm" variant="outline" onClick={() => onReprice(record.idempotency_key)}>
+                                        <RefreshCw className="mr-1 size-3" />
+                                        Cập nhật giá hiện tại
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
