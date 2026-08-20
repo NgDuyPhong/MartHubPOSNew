@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\QuickUpdateProductRequest;
 use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductStatusRequest;
 use App\Models\ApprovalEvent;
 use App\Models\Barcode;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\Unit;
+use App\Services\ProductImageService;
 use App\Services\ResourceVersionService;
 use App\Support\VietnameseSearch;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +23,10 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly ResourceVersionService $resourceVersions) {}
+    public function __construct(
+        private readonly ResourceVersionService $resourceVersions,
+        private readonly ProductImageService $productImages,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -76,6 +81,55 @@ class ProductController extends Controller
         ]);
     }
 
+    public function create(Request $request): Response
+    {
+        abort_unless($request->user()->canManageCatalog(), 403);
+
+        return Inertia::render('products/create', $this->formOptions($request));
+    }
+
+    public function edit(Request $request, Product $product): Response
+    {
+        abort_unless($product->organization_id === $request->user()->organization_id, 403);
+        abort_unless($request->user()->canManageCatalog(), 403);
+
+        $product->load([
+            'category:id,name',
+            'variants' => fn ($query) => $query->with([
+                'units' => fn ($unitQuery) => $unitQuery->with(['unit:id,code,name', 'barcodes:id,product_unit_id,value']),
+            ]),
+        ]);
+
+        return Inertia::render('products/edit', [
+            ...$this->formOptions($request),
+            'product' => $product,
+        ]);
+    }
+
+    public function updateStatus(UpdateProductStatusRequest $request, Product $product): RedirectResponse
+    {
+        abort_unless($product->organization_id === $request->user()->organization_id, 403);
+
+        $updatedAt = Carbon::parse($request->validated('updated_at'));
+        abort_unless($product->updated_at?->timestamp === $updatedAt->timestamp, 409, 'Sản phẩm đã được cập nhật ở nơi khác. Tải lại dữ liệu rồi thử lại.');
+
+        $isActive = $request->boolean('is_active');
+        if ($isActive) {
+            $hasSellableUnit = $product->variants()
+                ->where('is_active', true)
+                ->whereHas('units', fn ($query) => $query->where('is_active', true)->where('is_default_sale', true))
+                ->exists();
+            abort_unless($hasSellableUnit, 422, 'Không thể bán lại: sản phẩm cần có biến thể và đơn vị bán mặc định đang hoạt động.');
+        }
+
+        DB::transaction(function () use ($product, $isActive, $request): void {
+            $product->update(['is_active' => $isActive]);
+            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+        });
+
+        return back()->with('success', $isActive ? 'Đã bán lại sản phẩm.' : 'Đã ngừng bán sản phẩm. Tồn kho và lịch sử vẫn được giữ nguyên.');
+    }
+
     public function quickUpdate(QuickUpdateProductRequest $request, Product $product): RedirectResponse
     {
         abort_unless($product->organization_id === $request->user()->organization_id, 403);
@@ -114,35 +168,45 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
-            $data = $request->validated();
-            $product = Product::query()->create([
-                'organization_id' => $request->user()->organization_id,
-                'category_id' => $data['category_id'] ?? null,
-                'sku' => $data['sku'],
-                'name' => $data['name'],
-                'image_path' => $request->file('image')?->store('products', 'public'),
-                'track_lot' => $data['track_lot'] ?? false,
-                'track_expiry' => $data['track_expiry'] ?? false,
-                'is_active' => $data['is_active'] ?? true,
-            ]);
-            $variant = $product->variants()->create(['name' => 'Mặc định', 'sku' => $product->sku, 'last_cost_base' => 0, 'is_active' => true]);
-            foreach ($data['units'] as $unitData) {
-                $productUnit = $variant->units()->create([
-                    'unit_id' => $unitData['unit_id'],
-                    'conversion_to_base' => $unitData['conversion_to_base'],
-                    'sale_price' => $unitData['sale_price'],
-                    'is_base' => $unitData['is_base'],
-                    'is_default_sale' => $unitData['is_default_sale'],
-                    'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
-                    'is_active' => true,
+        $data = $request->validated();
+        $newImagePath = $data['image_action'] === 'upload'
+            ? $this->productImages->store($request->file('image'), $request->user()->organization_id)
+            : null;
+
+        try {
+            DB::transaction(function () use ($request, $data, $newImagePath): void {
+                $product = Product::query()->create([
+                    'organization_id' => $request->user()->organization_id,
+                    'category_id' => $data['category_id'] ?? null,
+                    'sku' => $data['sku'],
+                    'name' => $data['name'],
+                    'image_path' => $newImagePath,
+                    'external_image_url' => $data['image_action'] === 'external' ? $data['external_image_url'] : null,
+                    'track_lot' => $data['track_lot'] ?? false,
+                    'track_expiry' => $data['track_expiry'] ?? false,
+                    'is_active' => $data['is_active'] ?? true,
                 ]);
-                if ($unitData['barcode'] ?? null) {
-                    Barcode::query()->create(['product_unit_id' => $productUnit->id, 'value' => $unitData['barcode'], 'is_primary' => true]);
+                $variant = $product->variants()->create(['name' => 'Mặc định', 'sku' => $product->sku, 'last_cost_base' => 0, 'is_active' => true]);
+                foreach ($data['units'] as $unitData) {
+                    $productUnit = $variant->units()->create([
+                        'unit_id' => $unitData['unit_id'],
+                        'conversion_to_base' => $unitData['conversion_to_base'],
+                        'sale_price' => $unitData['sale_price'],
+                        'is_base' => $unitData['is_base'],
+                        'is_default_sale' => $unitData['is_default_sale'],
+                        'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
+                        'is_active' => true,
+                    ]);
+                    if ($unitData['barcode'] ?? null) {
+                        Barcode::query()->create(['product_unit_id' => $productUnit->id, 'value' => $unitData['barcode'], 'is_primary' => true]);
+                    }
                 }
-            }
-            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
-        });
+                $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+            });
+        } catch (\Throwable $exception) {
+            $this->productImages->delete($newImagePath);
+            throw $exception;
+        }
 
         return back()->with('success', 'Đã tạo sản phẩm và quy cách bán.');
     }
@@ -151,47 +215,77 @@ class ProductController extends Controller
     {
         abort_unless($product->organization_id === $request->user()->organization_id, 403);
 
-        DB::transaction(function () use ($request, $product) {
-            $data = $request->validated();
-            $product->update([
-                'category_id' => $data['category_id'] ?? null,
-                'sku' => $data['sku'],
-                'name' => $data['name'],
-                'track_lot' => $data['track_lot'] ?? false,
-                'track_expiry' => $data['track_expiry'] ?? false,
-                'is_active' => $data['is_active'] ?? true,
-                ...($request->hasFile('image') ? ['image_path' => $request->file('image')->store('products', 'public')] : []),
-            ]);
-            $variant = $product->variants()->firstOrFail();
-            $variant->update(['sku' => $product->sku]);
-            $keptIds = [];
-            foreach ($data['units'] as $unitData) {
-                $productUnit = isset($unitData['id'])
-                    ? $variant->units()->whereKey($unitData['id'])->firstOrFail()
-                    : $variant->units()->firstOrNew(['unit_id' => $unitData['unit_id']]);
-                $productUnit->fill([
-                    'unit_id' => $unitData['unit_id'],
-                    'conversion_to_base' => $unitData['conversion_to_base'],
-                    'sale_price' => $unitData['sale_price'],
-                    'is_base' => $unitData['is_base'],
-                    'is_default_sale' => $unitData['is_default_sale'],
-                    'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
-                    'is_active' => true,
-                ])->save();
-                $keptIds[] = $productUnit->id;
-                $barcode = $productUnit->barcodes()->where('is_primary', true)->first();
-                if ($unitData['barcode'] ?? null) {
-                    $barcode
-                        ? $barcode->update(['value' => $unitData['barcode']])
-                        : Barcode::query()->create(['product_unit_id' => $productUnit->id, 'value' => $unitData['barcode'], 'is_primary' => true]);
-                } elseif ($barcode) {
-                    $barcode->delete();
+        $data = $request->validated();
+        $oldImagePath = $product->image_path;
+        $newImagePath = $data['image_action'] === 'upload'
+            ? $this->productImages->store($request->file('image'), $request->user()->organization_id)
+            : null;
+
+        try {
+            DB::transaction(function () use ($request, $product, $data, $newImagePath): void {
+                $product->update([
+                    'category_id' => $data['category_id'] ?? null,
+                    'sku' => $data['sku'],
+                    'name' => $data['name'],
+                    'track_lot' => $data['track_lot'] ?? false,
+                    'track_expiry' => $data['track_expiry'] ?? false,
+                    'is_active' => $data['is_active'] ?? true,
+                    'image_path' => match ($data['image_action']) {
+                        'upload' => $newImagePath,
+                        'remove', 'external' => null,
+                        default => $product->image_path,
+                    },
+                    'external_image_url' => $data['image_action'] === 'external' ? $data['external_image_url'] : ($data['image_action'] === 'remove' || $data['image_action'] === 'upload' ? null : $product->external_image_url),
+                ]);
+                $variant = $product->variants()->firstOrFail();
+                $variant->update(['sku' => $product->sku]);
+                $keptIds = [];
+                foreach ($data['units'] as $unitData) {
+                    $productUnit = isset($unitData['id'])
+                        ? $variant->units()->whereKey($unitData['id'])->firstOrFail()
+                        : $variant->units()->firstOrNew(['unit_id' => $unitData['unit_id']]);
+                    $productUnit->fill([
+                        'unit_id' => $unitData['unit_id'],
+                        'conversion_to_base' => $unitData['conversion_to_base'],
+                        'sale_price' => $unitData['sale_price'],
+                        'is_base' => $unitData['is_base'],
+                        'is_default_sale' => $unitData['is_default_sale'],
+                        'allows_fractional_quantity' => $unitData['allows_fractional_quantity'] ?? false,
+                        'is_active' => true,
+                    ])->save();
+                    $keptIds[] = $productUnit->id;
+                    $barcode = $productUnit->barcodes()->where('is_primary', true)->first();
+                    if ($unitData['barcode'] ?? null) {
+                        $barcode
+                            ? $barcode->update(['value' => $unitData['barcode']])
+                            : Barcode::query()->create(['product_unit_id' => $productUnit->id, 'value' => $unitData['barcode'], 'is_primary' => true]);
+                    } elseif ($barcode) {
+                        $barcode->delete();
+                    }
                 }
-            }
-            $variant->units()->whereNotIn('id', $keptIds)->update(['is_active' => false, 'is_base' => false, 'is_default_sale' => false]);
-            $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
-        });
+                $variant->units()->whereNotIn('id', $keptIds)->update(['is_active' => false, 'is_base' => false, 'is_default_sale' => false]);
+                $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
+            });
+        } catch (\Throwable $exception) {
+            $this->productImages->delete($newImagePath, $product->id);
+            throw $exception;
+        }
+
+        if ($oldImagePath !== $product->fresh()->image_path && $oldImagePath !== $newImagePath) {
+            $this->productImages->delete($oldImagePath, $product->id);
+        }
 
         return back()->with('success', 'Đã cập nhật sản phẩm và quy cách bán.');
+    }
+
+    /** @return array<string, mixed> */
+    private function formOptions(Request $request): array
+    {
+        $organizationId = $request->user()->organization_id;
+
+        return [
+            'categories' => Category::query()->where('organization_id', $organizationId)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'units' => Unit::query()->where('organization_id', $organizationId)->where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+        ];
     }
 }

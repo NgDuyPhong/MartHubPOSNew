@@ -26,6 +26,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
     const defaultSelection = getDefaultSellableSelection(product);
     const variant = defaultSelection?.variant;
     const unit = defaultSelection?.unit;
+    const [imageFailed, setImageFailed] = useState(false);
     const stock = variant
         ? Number(variant.balances[0]?.quantity_base ?? 0)
         : product.variants.reduce((total, item) => total + Number(item.balances[0]?.quantity_base ?? 0), 0);
@@ -59,12 +60,14 @@ const CatalogProductCard = memo(function CatalogProductCard({
             className="group bg-card focus-visible:ring-ring hover:border-primary relative flex min-h-32 flex-col rounded-lg border p-3 text-left transition hover:shadow-md focus-visible:ring-2"
         >
             <button type="button" onClick={addDefault} className="flex min-w-0 flex-1 flex-col text-left">
-                {product.image_path ? (
+                {product.image_url && !imageFailed ? (
                     <img
-                        src={`/storage/${product.image_path}`}
+                        src={product.image_url}
                         alt=""
                         loading="lazy"
                         decoding="async"
+                        referrerPolicy="no-referrer"
+                        onError={() => setImageFailed(true)}
                         className="mb-2 size-12 rounded-md object-cover"
                     />
                 ) : (

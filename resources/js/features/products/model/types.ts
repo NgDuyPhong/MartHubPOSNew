@@ -17,6 +17,9 @@ export type Product = {
     name: string;
     category_id: number | null;
     image_path?: string;
+    image_url?: string | null;
+    image_source?: 'none' | 'upload' | 'external';
+    external_image_url?: string | null;
     track_lot: boolean;
     track_expiry: boolean;
     is_active: boolean;
@@ -43,6 +46,8 @@ export type ProductFormData = {
     sku: string;
     category_id: number | '';
     image: File | null;
+    image_action: 'none' | 'keep' | 'remove' | 'upload' | 'external';
+    external_image_url: string;
     track_lot: boolean;
     track_expiry: boolean;
     is_active: boolean;

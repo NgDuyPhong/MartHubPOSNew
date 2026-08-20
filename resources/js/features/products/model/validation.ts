@@ -11,3 +11,9 @@ export function normalizeUnitRows(rows: UnitRow[]): UnitRow[] {
 export function hasValidBaseUnit(rows: UnitRow[]): boolean {
     return rows.filter((row) => row.is_base).length === 1 && rows.some((row) => row.is_base && row.conversion_to_base === 1);
 }
+
+export function generateProductSku(): string {
+    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    return `SP-${suffix}`;
+}

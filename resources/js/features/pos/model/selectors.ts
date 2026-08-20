@@ -41,7 +41,7 @@ export function getCatalogVersion(catalog: Product[]): string {
                 })
                 .join(';');
 
-            return `${product.id}:${product.updated_at ?? ''}:${product.sku}:${product.name}:${product.image_path ?? ''}:${product.category_id ?? ''}:${product.category?.name ?? ''}:${product.category?.color ?? ''}:${variants}`;
+            return `${product.id}:${product.updated_at ?? ''}:${product.sku}:${product.name}:${product.image_url ?? ''}:${product.image_source ?? ''}:${product.category_id ?? ''}:${product.category?.name ?? ''}:${product.category?.color ?? ''}:${variants}`;
         })
         .join('|');
 }

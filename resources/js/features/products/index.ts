@@ -1,3 +1,11 @@
-export { ProductFormDialog, ProductQuickEditSheet, ProductTable, ProductUnitsEditor } from './components';
+export {
+    ProductForm,
+    ProductFormDialog,
+    ProductImageField,
+    ProductQuickEditSheet,
+    ProductStatusDialog,
+    ProductTable,
+    ProductUnitsEditor,
+} from './components';
 export type { Product, ProductFormData, Unit, UnitRow } from './model/types';
-export { hasValidBaseUnit, normalizeUnitRows } from './model/validation';
+export { generateProductSku, hasValidBaseUnit, normalizeUnitRows } from './model/validation';

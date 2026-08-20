@@ -16,6 +16,8 @@ export type Product = {
     sku: string;
     name: string;
     image_path?: string;
+    image_url?: string | null;
+    image_source?: 'none' | 'upload' | 'external';
     category_id: number | null;
     updated_at?: string;
     category?: { name: string; color?: string };

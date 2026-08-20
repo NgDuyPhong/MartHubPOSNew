@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ProductImageService;
 use App\Support\VietnameseSearch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    protected $fillable = ['organization_id', 'category_id', 'sku', 'name', 'image_path', 'track_lot', 'track_expiry', 'is_active'];
+    protected $fillable = ['organization_id', 'category_id', 'sku', 'name', 'image_path', 'external_image_url', 'track_lot', 'track_expiry', 'is_active'];
+
+    protected $appends = ['image_url', 'image_source'];
 
     protected function casts(): array
     {
@@ -31,5 +34,21 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path !== null
+            ? app(ProductImageService::class)->url($this->image_path)
+            : $this->external_image_url;
+    }
+
+    public function getImageSourceAttribute(): string
+    {
+        return match (true) {
+            $this->image_path !== null => 'upload',
+            $this->external_image_url !== null => 'external',
+            default => 'none',
+        };
     }
 }
