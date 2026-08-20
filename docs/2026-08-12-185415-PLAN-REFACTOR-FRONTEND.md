@@ -611,7 +611,7 @@ format:check
 | 13 | Đã hoàn tất code, chờ UAT | Đã tách `OpenShiftDialog`, `CashMovementDialog`, `CloseShiftDialog`, `ShiftTable` và selector đếm tiền; còn manual UAT chuyển trạng thái ca. |
 | 14 | Đã hoàn tất code, chờ UAT | Đã tách `SaleReceipt`, `ReturnDialog`, `ReturnItemsTable` và model return payload; còn manual UAT đổi/trả và in receipt. |
 | 15 | Đã hoàn tất code, chờ UAT | Đã tách `CustomerFormDialog`, `CustomerTable`, `DebtPaymentDialog` và selector công nợ; còn manual UAT thu nợ. |
-| 16 | Đã hoàn tất audit/config, chờ cleanup decision | Navigation đã đưa ra `config/navigation.ts`; inventory starter được ghi nhận tại `docs/STARTER-SHELL-INVENTORY.md`. Candidate cleanup chỉ thực hiện sau xác nhận deployment. |
+| 16 | Đã hoàn tất audit/config, chờ cleanup decision | Navigation đã đưa ra `config/navigation.ts`; inventory starter được ghi nhận tại `docs/2026-08-12-213515-STARTER-SHELL-INVENTORY.md`. Candidate cleanup chỉ thực hiện sau xác nhận deployment. |
 
 ### Báo cáo tiến độ hiện tại
 

@@ -13,7 +13,7 @@ Tài liệu tại `old/docs/legacy-system` là bằng chứng hiện trạng. Kh
 
 ## Hiện trạng source mới
 
-`MartHubPOSNew` đã có domain và các vertical slice vận hành chính cho POS, catalog, inventory, invoice, ca/két, công nợ, đổi trả và offline queue. Source vẫn chưa được coi là sẵn sàng cutover cho tới khi hoàn thành ETL từ backup MySQL, rehearsal trên MySQL staging và UAT thiết bị thật. Trạng thái chi tiết được ghi tại `migration/06-trang-thai-trien-khai.md`.
+`MartHubPOSNew` đã có domain và các vertical slice vận hành chính cho POS, catalog, inventory, invoice, ca/két, công nợ, đổi trả và offline queue. Source vẫn chưa được coi là sẵn sàng cutover cho tới khi hoàn thành ETL từ backup MySQL, rehearsal trên MySQL staging và UAT thiết bị thật. Trạng thái chi tiết được ghi tại `migration/2026-08-11-211454-06-trang-thai-trien-khai.md`.
 
 Không bắt buộc giữ role hay giao diện mặc định của starter kit. Authentication hiện có được tận dụng làm nền; phân quyền sẽ thiết kế theo capability để không bị khóa vào bộ role cứng.
 
@@ -32,19 +32,19 @@ Không bắt buộc giữ role hay giao diện mặc định của starter kit. 
 
 ## Cấu trúc tài liệu
 
-1. [01-pham-vi-ke-thua.md](migration/01-pham-vi-ke-thua.md): baseline, phạm vi bắt buộc và nguyên tắc kế thừa.
-2. [02-ma-tran-chuc-nang.md](migration/02-ma-tran-chuc-nang.md): ma trận chức năng cũ sang mới và tiêu chí nghiệm thu.
-3. [03-dinh-huong-giao-dien.md](migration/03-dinh-huong-giao-dien.md): UI continuity, bố cục và quy tắc cải tiến.
-4. [04-kien-truc-va-du-lieu.md](migration/04-kien-truc-va-du-lieu.md): kiến trúc đích, ranh giới nghiệp vụ và migration dữ liệu.
-5. [05-ke-hoach-trien-khai.md](migration/05-ke-hoach-trien-khai.md): kế hoạch theo milestone, dependency và Definition of Done.
-6. [06-trang-thai-trien-khai.md](migration/06-trang-thai-trien-khai.md): phần đã code, kiểm tra đã chạy và các gate còn thiếu trước cutover.
-7. [07-ke-hoach-export-import-du-lieu-legacy.md](migration/07-ke-hoach-export-import-du-lieu-legacy.md): contract và kế hoạch triển khai chức năng export nhanh ở source cũ, import nhanh ở source mới và đối soát cutover.
+1. [2026-08-11-211454-01-pham-vi-ke-thua.md](migration/2026-08-11-211454-01-pham-vi-ke-thua.md): baseline, phạm vi bắt buộc và nguyên tắc kế thừa.
+2. [2026-08-11-211454-02-ma-tran-chuc-nang.md](migration/2026-08-11-211454-02-ma-tran-chuc-nang.md): ma trận chức năng cũ sang mới và tiêu chí nghiệm thu.
+3. [2026-08-11-211454-03-dinh-huong-giao-dien.md](migration/2026-08-11-211454-03-dinh-huong-giao-dien.md): UI continuity, bố cục và quy tắc cải tiến.
+4. [2026-08-11-211454-04-kien-truc-va-du-lieu.md](migration/2026-08-11-211454-04-kien-truc-va-du-lieu.md): kiến trúc đích, ranh giới nghiệp vụ và migration dữ liệu.
+5. [2026-08-11-211454-05-ke-hoach-trien-khai.md](migration/2026-08-11-211454-05-ke-hoach-trien-khai.md): kế hoạch theo milestone, dependency và Definition of Done.
+6. [2026-08-11-211454-06-trang-thai-trien-khai.md](migration/2026-08-11-211454-06-trang-thai-trien-khai.md): phần đã code, kiểm tra đã chạy và các gate còn thiếu trước cutover.
+7. [2026-08-13-231447-07-ke-hoach-export-import-du-lieu-legacy.md](migration/2026-08-13-231447-07-ke-hoach-export-import-du-lieu-legacy.md): contract và kế hoạch triển khai chức năng export nhanh ở source cũ, import nhanh ở source mới và đối soát cutover.
 
 ## Kế hoạch chuyên đề
 
-- [PLAN-NANG-CAP-UX-TOAN-DIEN.md](PLAN-NANG-CAP-UX-TOAN-DIEN.md): audit và roadmap UX toàn hệ thống, gồm search/filter/pagination cho các collection và sửa nhanh sản phẩm từ màn POS.
-- [PLAN-TOI-UU-POS-CATALOG-SEARCH.md](PLAN-TOI-UU-POS-CATALOG-SEARCH.md): tối ưu riêng cho search, barcode và rendering catalog POS.
-- [PLAN-REFACTOR-FRONTEND.md](PLAN-REFACTOR-FRONTEND.md): kiến trúc feature, dependency boundary và lộ trình refactor frontend.
+- [2026-08-14-222010-PLAN-NANG-CAP-UX-TOAN-DIEN.md](2026-08-14-222010-PLAN-NANG-CAP-UX-TOAN-DIEN.md): audit và roadmap UX toàn hệ thống, gồm search/filter/pagination cho các collection và sửa nhanh sản phẩm từ màn POS.
+- [2026-08-13-233731-PLAN-TOI-UU-POS-CATALOG-SEARCH.md](2026-08-13-233731-PLAN-TOI-UU-POS-CATALOG-SEARCH.md): tối ưu riêng cho search, barcode và rendering catalog POS.
+- [2026-08-12-185415-PLAN-REFACTOR-FRONTEND.md](2026-08-12-185415-PLAN-REFACTOR-FRONTEND.md): kiến trúc feature, dependency boundary và lộ trình refactor frontend.
 
 ## Thứ tự ưu tiên tổng quát
 

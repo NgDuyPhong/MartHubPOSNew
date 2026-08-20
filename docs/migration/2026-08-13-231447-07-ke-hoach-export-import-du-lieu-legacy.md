@@ -28,7 +28,7 @@ Không chuyển bằng fast path này:
 - settings, secret, audit log, cache, session, job và offline queue;
 - `product_pricing_tiers` hoặc giá theo nhóm khách hàng vì schema đích chưa có price book tương ứng.
 
-Hệ thống cũ phải được giữ read-only để tra cứu dữ liệu ngoài phạm vi. Fast path này **không thay thế** kế hoạch ETL toàn bộ dữ liệu một năm trong [04-kien-truc-va-du-lieu.md](04-kien-truc-va-du-lieu.md). Trước khi triển khai phải chốt một trong hai quyết định:
+Hệ thống cũ phải được giữ read-only để tra cứu dữ liệu ngoài phạm vi. Fast path này **không thay thế** kế hoạch ETL toàn bộ dữ liệu một năm trong [2026-08-11-211454-04-kien-truc-va-du-lieu.md](2026-08-11-211454-04-kien-truc-va-du-lieu.md). Trước khi triển khai phải chốt một trong hai quyết định:
 
 1. chỉ cần catalog + tồn đầu kỳ: dùng tài liệu này làm runbook chính;
 2. cần cả khách hàng/hóa đơn/thanh toán lịch sử: mở workstream ETL riêng, không mở rộng âm thầm contract `product_catalog`.

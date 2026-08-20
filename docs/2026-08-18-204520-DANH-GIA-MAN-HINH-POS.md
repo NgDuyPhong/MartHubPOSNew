@@ -142,7 +142,7 @@ Luồng tổng thể này hợp lý cho cửa hàng tiện lợi. Checkout đư�
 3. Delete chỉ chạy khi một cart row có selected/focus state rõ.
 4. Bổ sung F2 và Enter đúng contract đã chốt hoặc sửa bảng trợ giúp để không hứa hành vi chưa có.
 
-**Bằng chứng:** `use-pos-shortcuts.ts:25–27`, `use-pos-shortcuts.ts:45–47`, `pos-status-bar.tsx:27`, `docs/migration/02-ma-tran-chuc-nang.md:34–45`.
+**Bằng chứng:** `use-pos-shortcuts.ts:25–27`, `use-pos-shortcuts.ts:45–47`, `pos-status-bar.tsx:27`, `docs/migration/2026-08-11-211454-02-ma-tran-chuc-nang.md:34–45`.
 
 ### 5.2. P1 — Ca/quầy cần được định danh rõ để tránh nợ kỹ thuật khi mở rộng
 
@@ -198,7 +198,7 @@ Với bối cảnh hiện tại chỉ có một máy, một ca mở và ca dùng
 6. Khi còn pending, màn đóng ca phải cảnh báo rõ. Nếu vẫn cho đóng, phải dùng flow `đóng có pending` và bắt buộc reconciliation sau sync.
 7. Cung cấp export bản sao recovery queue theo contract migration trước cutover.
 
-**Bằng chứng:** `offline-sale-sync.ts:4–18`, `use-connectivity.ts:17–31`, `pos-status-bar.tsx:24`, `docs/migration/02-ma-tran-chuc-nang.md:57`.
+**Bằng chứng:** `offline-sale-sync.ts:4–18`, `use-connectivity.ts:17–31`, `pos-status-bar.tsx:24`, `docs/migration/2026-08-11-211454-02-ma-tran-chuc-nang.md:57`.
 
 ### 5.4. P0 — Validation tiền chưa nằm cạnh nơi nhập và một số giá trị sai vẫn hiển thị như hợp lệ
 
@@ -363,7 +363,7 @@ Quy tắc UI đã chốt:
 3. Khi khách mua hỗn hợp thùng + lon, nhân viên chọn hai unit riêng; scanner barcode thùng/lon tạo đúng hai dòng.
 4. Variant và unit phải được hiển thị rõ trong cart/receipt để không nhầm loại bia hoặc quy cách.
 
-**Bằng chứng:** `index.tsx:86–99`, `catalog-panel.tsx:23–25`, `selectors.ts` phần `barcodeMatches`, `docs/PLAN-NANG-CAP-UX-TOAN-DIEN.md:304–311`.
+**Bằng chứng:** `index.tsx:86–99`, `catalog-panel.tsx:23–25`, `selectors.ts` phần `barcodeMatches`, `docs/2026-08-14-222010-PLAN-NANG-CAP-UX-TOAN-DIEN.md:304–311`.
 
 ### 5.11. P1 — Thanh toán cần tối ưu cho tiền mặt thực tế
 

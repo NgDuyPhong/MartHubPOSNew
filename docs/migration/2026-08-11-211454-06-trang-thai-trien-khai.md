@@ -58,7 +58,7 @@ Unit test, feature test và browser E2E vẫn để ở milestone hardening theo
 ## Chưa được coi là sẵn sàng cutover
 
 1. Chưa có backup MySQL legacy để chạy profiling catalog, giá, đơn vị và tồn kho thật.
-2. Fast path command và UI import authenticated đã có; chưa có progress/retry queue theo production volume và chưa có UI export authenticated ở source cũ; kế hoạch chi tiết nằm tại [07-ke-hoach-export-import-du-lieu-legacy.md](07-ke-hoach-export-import-du-lieu-legacy.md).
+2. Fast path command và UI import authenticated đã có; chưa có progress/retry queue theo production volume và chưa có UI export authenticated ở source cũ; kế hoạch chi tiết nằm tại [2026-08-13-231447-07-ke-hoach-export-import-du-lieu-legacy.md](2026-08-13-231447-07-ke-hoach-export-import-du-lieu-legacy.md).
 3. Importer có kill switch `LEGACY_PRODUCT_IMPORT_ENABLED`; sau cutover có thể khóa route/menu và gỡ feature code mà không ảnh hưởng catalog đã nhập.
 4. Chưa rehearsal migration đầy đủ trên MySQL staging và chưa kiểm tra tương thích volume production.
 5. Chưa UAT trực quan trên đúng độ phân giải quầy, scanner và máy in nhiệt 58 mm.

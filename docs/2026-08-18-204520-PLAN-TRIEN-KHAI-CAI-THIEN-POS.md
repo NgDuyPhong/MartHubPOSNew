@@ -1,6 +1,6 @@
 # Kế hoạch triển khai cải thiện màn hình POS
 
-> Nguồn phân tích: [`docs/DANH-GIA-MAN-HINH-POS.md`](./DANH-GIA-MAN-HINH-POS.md)  
+> Nguồn phân tích: [`docs/2026-08-18-204520-DANH-GIA-MAN-HINH-POS.md`](./2026-08-18-204520-DANH-GIA-MAN-HINH-POS.md)  
 > Ngày lập kế hoạch: 16/08/2026  
 > Trạng thái: Đang triển khai — P0 đến P1-04 và P2-01 đã hoàn thiện phần code; benchmark production, UAT/pilot Gate A và visual regression Gate C còn chờ kiểm tra thực tế  
 > Phạm vi chính: POS, bán hàng, ca bán, catalog, offline queue và bản in 58 mm

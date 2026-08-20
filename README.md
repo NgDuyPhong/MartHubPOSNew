@@ -53,4 +53,4 @@ vendor\bin\pint --test --format agent
 
 ## Trước khi cutover
 
-ETL dữ liệu MySQL legacy chưa thể chạy cho tới khi có bản backup production. Cần rehearsal trên MySQL staging, đối chiếu số sản phẩm/hóa đơn/doanh thu/tồn/công nợ, kiểm thử máy in 58 mm và diễn tập cửa sổ cutover 12 giờ. Xem [bộ tài liệu chuyển đổi](docs/README.md) và [trạng thái triển khai](docs/migration/06-trang-thai-trien-khai.md).
+ETL dữ liệu MySQL legacy chưa thể chạy cho tới khi có bản backup production. Cần rehearsal trên MySQL staging, đối chiếu số sản phẩm/hóa đơn/doanh thu/tồn/công nợ, kiểm thử máy in 58 mm và diễn tập cửa sổ cutover 12 giờ. Xem [bộ tài liệu chuyển đổi](docs/README.md) và [trạng thái triển khai](docs/migration/2026-08-11-211454-06-trang-thai-trien-khai.md).
