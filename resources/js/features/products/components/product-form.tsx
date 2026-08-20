@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { InertiaFormProps } from '@inertiajs/react';
 import type { Product, ProductFormData, Unit, UnitRow } from '../model/types';
 import { generateProductSku, hasValidBaseUnit, normalizeUnitRows } from '../model/validation';
@@ -20,6 +21,10 @@ export function ProductForm({
     product?: Product;
     onCancel: () => void;
 }) {
+    const selectedCategory =
+        product?.category && product.category_id !== null
+            ? { value: String(product.category_id), label: product.category.name, searchText: product.category.name }
+            : null;
     const updateUnit = (index: number, values: Partial<UnitRow>) =>
         form.setData(
             'units',
@@ -77,19 +82,24 @@ export function ProductForm({
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="product-category">Danh mục</Label>
-                        <select
+                        <SearchableSelect
                             id="product-category"
-                            className="border-input bg-background h-10 rounded-md border px-3"
-                            value={form.data.category_id}
-                            onChange={(event) => form.setData('category_id', event.target.value ? Number(event.target.value) : '')}
-                        >
-                            <option value="">Không phân loại</option>
-                            {categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                    {category.name}
-                                </option>
-                            ))}
-                        </select>
+                            value={form.data.category_id === '' ? null : String(form.data.category_id)}
+                            options={categories.map((category) => ({ value: String(category.id), label: category.name, searchText: category.name }))}
+                            onValueChange={(value) => form.setData('category_id', value ? Number(value) : '')}
+                            placeholder="Không phân loại"
+                            searchPlaceholder="Tìm danh mục…"
+                            emptyText="Không tìm thấy danh mục."
+                            selectedOption={selectedCategory}
+                            invalid={Boolean(form.errors.category_id)}
+                            aria-describedby={form.errors.category_id ? 'product-category-error' : undefined}
+                            clearable
+                        />
+                        {form.errors.category_id && (
+                            <p id="product-category-error" className="text-destructive text-xs">
+                                {form.errors.category_id}
+                            </p>
+                        )}
                     </div>
                 </div>
             </section>

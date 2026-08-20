@@ -46,6 +46,25 @@ test('products index keeps server pagination and search filters', function () {
         ->where('products.total', 1));
 });
 
+test('product unit ids must be distinct', function () {
+    [$organization, , $owner] = catalogUser();
+    $unit = Unit::query()->create(['organization_id' => $organization->id, 'code' => 'EA', 'name' => 'Cái']);
+
+    $this->actingAs($owner)->post(route('products.store'), [
+        'name' => 'Sản phẩm trùng đơn vị',
+        'sku' => 'DUP-UNIT-001',
+        'category_id' => null,
+        'track_lot' => false,
+        'track_expiry' => false,
+        'is_active' => true,
+        'image_action' => 'none',
+        'units' => [
+            ['unit_id' => $unit->id, 'conversion_to_base' => 1, 'sale_price' => 5000, 'is_base' => true, 'is_default_sale' => true, 'allows_fractional_quantity' => false],
+            ['unit_id' => $unit->id, 'conversion_to_base' => 1, 'sale_price' => 5000, 'is_base' => false, 'is_default_sale' => false, 'allows_fractional_quantity' => false],
+        ],
+    ])->assertSessionHasErrors('units.1.unit_id');
+});
+
 test('catalog quick update is restricted and audited', function () {
     [$organization, , $owner] = catalogUser();
     [$product, $productUnit] = catalogProduct($organization->id);
@@ -114,6 +133,16 @@ test('products default to active status filter', function () {
     $this->actingAs($owner)->get(route('products.index'))->assertInertia(fn ($page) => $page
         ->where('filters.status', 'active')
         ->where('products.total', 1));
+});
+
+test('categories default to active status filter', function () {
+    [$organization, , $owner] = catalogUser();
+    Category::query()->create(['organization_id' => $organization->id, 'name' => 'Đang dùng', 'code' => 'dang-dung', 'is_active' => true]);
+    Category::query()->create(['organization_id' => $organization->id, 'name' => 'Ngừng dùng', 'code' => 'ngung-dung', 'is_active' => false]);
+
+    $this->actingAs($owner)->get(route('categories.index'))->assertInertia(fn ($page) => $page
+        ->where('filters.status', 'active')
+        ->where('categories.total', 1));
 });
 
 test('quick customer creation returns a customer ready for POS selection', function () {

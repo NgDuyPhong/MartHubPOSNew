@@ -104,6 +104,29 @@ Chỉ tạo thư mục khi có code thật cần đặt vào đó.
 - Không dùng màu sắc làm tín hiệu duy nhất.
 - Không thêm Ant Design, MUI, Bootstrap hoặc icon library thứ hai.
 
+## Quy trình quyết định Select
+
+Trước khi tạo hoặc sửa bất kỳ select nào, phải xác định rõ dùng select thường hay searchable select. Không mặc định thêm ô tìm kiếm cho mọi danh sách.
+
+Đánh giá theo các tiêu chí sau:
+
+1. **Loại dữ liệu và số lượng lựa chọn**:
+   - Dùng select thường (native select hoặc Radix Select hiện có) cho boolean, trạng thái, thứ tự sắp xếp, enum hoặc danh sách ngắn, ổn định; người dùng có thể nhìn và chọn nhanh.
+   - Dùng searchable select khi danh sách dài, có nhiều bản ghi tương tự, hoặc việc gõ tên/mã giúp nhanh hơn việc cuộn.
+2. **Tần suất và ngữ cảnh thao tác**:
+   - Filter nhanh với vài trạng thái cố định nên dùng select thường.
+   - Danh mục, đơn vị, khách hàng, sản phẩm hoặc mã có thể tăng theo dữ liệu nghiệp vụ thường cần searchable select.
+   - Trong POS, ưu tiên tốc độ, keyboard và barcode flow; không thêm searchable select nếu thao tác chính đã là quét barcode hoặc danh sách đủ ngắn để chọn trực tiếp.
+3. **Nguồn dữ liệu**:
+   - Danh sách nhỏ đã có sẵn ở client: dùng select thường hoặc searchable select tùy lợi ích thực tế.
+   - Danh sách lớn từ server: dùng searchable select/combobox với query server, debounce, loading, empty và error state; không tải toàn bộ dataset chỉ để phục vụ một select.
+   - Searchable select chỉ lọc client khi dataset đủ nhỏ và ổn định; debounce chỉ dùng khi giúp giảm re-render hoặc request, không làm chậm phản hồi nhập liệu.
+4. **Khả năng nhận biết lựa chọn**:
+   - Nếu người dùng cần tìm theo tên, mã, SKU, barcode hoặc nhiều trường, cấu hình `searchText`/query tương ứng và hiển thị placeholder, empty state, clear state và selected state rõ ràng.
+   - Nếu lựa chọn chỉ có vài giá trị dễ nhận biết, ô search tạo thêm bước và làm giảm discoverability; không sử dụng.
+
+Trước khi implement, ghi lại ngắn gọn quyết định và lý do trong plan hoặc phần mô tả task. Nếu số lượng dữ liệu, nguồn dữ liệu hoặc workflow chưa đủ rõ để chọn loại select, phải hỏi lại người đưa ra yêu cầu trước khi code. Khi code review, reviewer phải kiểm tra cả quyết định “có search hay không”, không chỉ kiểm tra visual của component.
+
 ## Quy tắc dependency bổ sung
 
 - Dùng Inertia `useForm` và Laravel validation cho CRUD form hiện tại.
@@ -148,4 +171,3 @@ Chỉ kết thúc UI task khi các mục liên quan đã đạt:
 - Light/dark theme không bị phá ở component đang hỗ trợ theme.
 - Inertia navigation, offline behavior và print behavior liên quan không regression.
 - TypeScript và production build pass khi thay đổi có ảnh hưởng đến code.
-

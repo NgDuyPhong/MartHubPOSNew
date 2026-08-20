@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useForm } from '@inertiajs/react';
 import { useEffect, type FormEvent } from 'react';
@@ -10,6 +11,7 @@ type QuickEditProduct = {
     name: string;
     sku: string;
     category_id: number | null;
+    category?: { name: string };
     updated_at?: string;
     variants: Array<{
         units: Array<{ id: number; sale_price: number; is_default_sale: boolean; unit: { name: string } }>;
@@ -83,29 +85,48 @@ export function ProductQuickEditSheet({
                     <SheetDescription>Thay đổi tên, danh mục hoặc giá của đơn vị đang chọn. Dữ liệu hóa đơn cũ không thay đổi.</SheetDescription>
                 </SheetHeader>
                 <form onSubmit={submit} className="flex flex-col gap-5 px-6 py-4">
-                    {!online && <p className="border-amber-300 bg-amber-50 text-amber-900 rounded-md border p-3 text-sm">Cần kết nối mạng để sửa dữ liệu sản phẩm.</p>}
+                    {!online && (
+                        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                            Cần kết nối mạng để sửa dữ liệu sản phẩm.
+                        </p>
+                    )}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="quick-product-name">Tên sản phẩm</Label>
-                        <Input id="quick-product-name" disabled={!online} value={form.data.name} onChange={(event) => form.setData('name', event.target.value)} required />
+                        <Input
+                            id="quick-product-name"
+                            disabled={!online}
+                            value={form.data.name}
+                            onChange={(event) => form.setData('name', event.target.value)}
+                            required
+                        />
                         {form.errors.name && <p className="text-destructive text-xs">{form.errors.name}</p>}
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="quick-product-category">Danh mục</Label>
-                        <select
+                        <SearchableSelect
                             id="quick-product-category"
-                            className="bg-background h-10 rounded-md border px-3 text-sm"
-                            value={form.data.category_id}
+                            value={form.data.category_id === '' ? null : String(form.data.category_id)}
+                            options={categories.map((category) => ({ value: String(category.id), label: category.name, searchText: category.name }))}
+                            onValueChange={(value) => form.setData('category_id', value ? Number(value) : '')}
+                            placeholder="Không phân loại"
+                            searchPlaceholder="Tìm danh mục…"
+                            emptyText="Không tìm thấy danh mục."
+                            selectedOption={
+                                product?.category && product.category_id !== null
+                                    ? { value: String(product.category_id), label: product.category.name, searchText: product.category.name }
+                                    : null
+                            }
+                            inputClassName="text-sm"
                             disabled={!online}
-                            onChange={(event) => form.setData('category_id', event.target.value ? Number(event.target.value) : '')}
-                        >
-                            <option value="">Không phân loại</option>
-                            {categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                    {category.name}
-                                </option>
-                            ))}
-                        </select>
-                        {form.errors.category_id && <p className="text-destructive text-xs">{form.errors.category_id}</p>}
+                            invalid={Boolean(form.errors.category_id)}
+                            aria-describedby={form.errors.category_id ? 'quick-product-category-error' : undefined}
+                            clearable
+                        />
+                        {form.errors.category_id && (
+                            <p id="quick-product-category-error" className="text-destructive text-xs">
+                                {form.errors.category_id}
+                            </p>
+                        )}
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="quick-product-price">Giá bán · {unit?.unit.name ?? 'đơn vị'}</Label>
@@ -120,7 +141,7 @@ export function ProductQuickEditSheet({
                         />
                         {form.errors.sale_price && <p className="text-destructive text-xs">{form.errors.sale_price}</p>}
                     </div>
-                    <p className="text-muted-foreground rounded-md border bg-muted/40 p-3 text-xs">
+                    <p className="text-muted-foreground bg-muted/40 rounded-md border p-3 text-xs">
                         Sản phẩm đang được sửa: <strong>{product?.sku}</strong>. Giá của dòng hàng đã có trong giỏ sẽ được giữ nguyên.
                     </p>
                     <SheetFooter className="px-0">

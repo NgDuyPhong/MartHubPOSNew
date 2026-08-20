@@ -1,5 +1,6 @@
 import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ProductStatusDialog, ProductTable, type Product } from '@/features/products';
 import { useListQuery } from '@/hooks/use-list-query';
 import AppLayout from '@/layouts/app-layout';
@@ -31,7 +32,11 @@ export default function ProductsPage({
     const statusForm = useForm<{ is_active: boolean; updated_at: string }>({ is_active: false, updated_at: '' });
     const confirmStatus = () => {
         if (!statusProduct) return;
-        statusForm.setData({ is_active: !statusProduct.is_active, updated_at: statusProduct.updated_at ?? '' });
+
+        const nextIsActive = !statusProduct.is_active;
+        const updatedAt = statusProduct.updated_at ?? '';
+
+        statusForm.transform(() => ({ is_active: nextIsActive, updated_at: updatedAt }));
         statusForm.patch(route('products.status.update', statusProduct.id), { preserveScroll: true, onSuccess: () => setStatusProduct(null) });
     };
 
@@ -55,19 +60,17 @@ export default function ProductsPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên, SKU hoặc barcode…" />
-                    <select
-                        className="bg-background h-10 rounded-md border px-3 text-sm"
-                        value={query.category_id ?? ''}
-                        onChange={(event) => update('category_id', event.target.value ? Number(event.target.value) : null)}
+                    <SearchableSelect
+                        value={query.category_id === null ? null : String(query.category_id)}
+                        options={categories.map((category) => ({ value: String(category.id), label: category.name, searchText: category.name }))}
+                        onValueChange={(value) => update('category_id', value ? Number(value) : null)}
+                        placeholder="Tất cả danh mục"
+                        searchPlaceholder="Tìm danh mục…"
+                        emptyText="Không tìm thấy danh mục."
                         aria-label="Lọc theo danh mục"
-                    >
-                        <option value="">Tất cả danh mục</option>
-                        {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
+                        clearable
+                        className="md:min-w-56"
+                    />
                     <select
                         className="bg-background h-10 rounded-md border px-3 text-sm"
                         value={query.status}

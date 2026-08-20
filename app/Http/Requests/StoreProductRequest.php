@@ -32,7 +32,7 @@ class StoreProductRequest extends FormRequest
             'external_image_url' => ['nullable', 'string', 'max:2048', new PublicHttpsImageUrl],
             'units' => ['required', 'array', 'min:1'],
             'units.*.id' => ['nullable', 'integer', 'exists:product_units,id'],
-            'units.*.unit_id' => ['required', Rule::exists('units', 'id')->where('organization_id', $organizationId)],
+            'units.*.unit_id' => ['required', 'distinct', Rule::exists('units', 'id')->where('organization_id', $organizationId)],
             'units.*.conversion_to_base' => ['required', 'numeric', 'min:0.000001'],
             'units.*.sale_price' => ['required', 'integer', 'min:0'],
             'units.*.barcode' => ['nullable', 'string', 'max:100', 'distinct'],
@@ -50,6 +50,7 @@ class StoreProductRequest extends FormRequest
             'image.max' => 'Ảnh không được vượt quá 4 MB.',
             'external_image_url.url' => 'URL ảnh không hợp lệ.',
             'units.required' => 'Sản phẩm phải có ít nhất một đơn vị bán.',
+            'units.*.unit_id.distinct' => 'Mỗi đơn vị bán chỉ được chọn một lần.',
             'units.*.barcode.unique' => 'Mã vạch đã được dùng cho sản phẩm khác.',
         ];
     }

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { InertiaFormProps } from '@inertiajs/react';
 import type { ProductFormData, Unit, UnitRow } from '../model/types';
 import { ProductUnitsEditor } from './product-units-editor';
@@ -13,6 +14,7 @@ export function ProductFormDialog({
     categories,
     units,
     firstUnit,
+    selectedCategory,
     onOpenChange,
     onSubmit,
     updateUnit,
@@ -24,6 +26,7 @@ export function ProductFormDialog({
     categories: Array<{ id: number; name: string }>;
     units: Unit[];
     firstUnit: number;
+    selectedCategory?: { id: number; name: string } | null;
     onOpenChange: (open: boolean) => void;
     onSubmit: (event: React.FormEvent) => void;
     updateUnit: (index: number, values: Partial<UnitRow>) => void;
@@ -48,19 +51,33 @@ export function ProductFormDialog({
                             <Input value={form.data.sku} onChange={(event) => form.setData('sku', event.target.value)} required />
                         </div>
                         <div>
-                            <Label>Danh mục</Label>
-                            <select
-                                className="h-10 w-full rounded-md border bg-white px-3"
-                                value={form.data.category_id}
-                                onChange={(event) => form.setData('category_id', event.target.value ? Number(event.target.value) : '')}
-                            >
-                                <option value="">Không phân loại</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <Label htmlFor="product-dialog-category">Danh mục</Label>
+                            <SearchableSelect
+                                id="product-dialog-category"
+                                value={form.data.category_id === '' ? null : String(form.data.category_id)}
+                                options={categories.map((category) => ({
+                                    value: String(category.id),
+                                    label: category.name,
+                                    searchText: category.name,
+                                }))}
+                                onValueChange={(value) => form.setData('category_id', value ? Number(value) : '')}
+                                placeholder="Không phân loại"
+                                searchPlaceholder="Tìm danh mục…"
+                                emptyText="Không tìm thấy danh mục."
+                                selectedOption={
+                                    selectedCategory
+                                        ? { value: String(selectedCategory.id), label: selectedCategory.name, searchText: selectedCategory.name }
+                                        : null
+                                }
+                                invalid={Boolean(form.errors.category_id)}
+                                aria-describedby={form.errors.category_id ? 'product-dialog-category-error' : undefined}
+                                clearable
+                            />
+                            {form.errors.category_id && (
+                                <p id="product-dialog-category-error" className="text-destructive mt-1 text-xs">
+                                    {form.errors.category_id}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div>
@@ -87,7 +104,12 @@ export function ProductFormDialog({
                             Theo dõi hạn sử dụng
                         </label>
                         <label>
-                            <input type="checkbox" className="mr-2" checked={form.data.is_active} onChange={(event) => form.setData('is_active', event.target.checked)} />
+                            <input
+                                type="checkbox"
+                                className="mr-2"
+                                checked={form.data.is_active}
+                                onChange={(event) => form.setData('is_active', event.target.checked)}
+                            />
                             Đang bán
                         </label>
                     </div>

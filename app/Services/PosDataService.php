@@ -74,7 +74,7 @@ class PosDataService
             ->where('organization_id', $user->organization_id)
             ->where('is_active', true)
             ->select(['id', 'category_id', 'sku', 'name', 'image_path', 'external_image_url', 'updated_at'])
-            ->with(['variants' => fn ($query) => $query->select(['id', 'product_id', 'name', 'updated_at'])->where('is_active', true)->with([
+            ->with(['category:id,name,color', 'variants' => fn ($query) => $query->select(['id', 'product_id', 'name', 'updated_at'])->where('is_active', true)->with([
                 'units' => fn ($unitQuery) => $unitQuery->select(['id', 'product_variant_id', 'unit_id', 'conversion_to_base', 'sale_price', 'is_default_sale', 'allows_fractional_quantity', 'updated_at'])->where('is_active', true)->with([
                     'unit:id,code,name',
                     'barcodes:id,product_unit_id,value,updated_at',
