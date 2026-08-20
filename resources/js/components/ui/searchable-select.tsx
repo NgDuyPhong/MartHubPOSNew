@@ -20,6 +20,7 @@ export type SearchableSelectProps = {
     placeholder?: string;
     searchPlaceholder?: string;
     searchDebounceMs?: number;
+    maxVisibleOptions?: number;
     emptyText?: string;
     loadingText?: string;
     disabled?: boolean;
@@ -43,6 +44,7 @@ export function SearchableSelect({
     placeholder = 'Chọn một tùy chọn…',
     searchPlaceholder = 'Tìm kiếm…',
     searchDebounceMs = 150,
+    maxVisibleOptions,
     emptyText = 'Không tìm thấy kết quả.',
     loadingText = 'Đang tải…',
     disabled = false,
@@ -59,7 +61,6 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
     const generatedId = useId();
     const id = idProp ?? generatedId;
-    const searchId = `${id}-search`;
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState(query);
     const [lastSelectedOption, setLastSelectedOption] = useState<SearchableOption | null>(null);
@@ -100,6 +101,8 @@ export function SearchableSelect({
 
         return options.filter((option) => vietnameseIncludes(`${option.label} ${option.searchText ?? ''}`, debouncedQuery));
     }, [debouncedQuery, options]);
+    const visibleOptions =
+        maxVisibleOptions === undefined ? filteredOptions : filteredOptions.slice(0, Math.max(0, maxVisibleOptions));
 
     const handleChange = (option: SearchableOption | null) => {
         setLastSelectedOption(option);
@@ -116,30 +119,40 @@ export function SearchableSelect({
     };
 
     return (
-        <Combobox value={selectedOption} onChange={handleChange} disabled={disabled} nullable by="value">
+        <Combobox value={selectedOption} onChange={handleChange} onClose={() => setQuery('')} disabled={disabled} nullable by="value">
             {({ open }) => (
                 <div className={cn('relative w-full', className)}>
-                    <ComboboxButton
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" aria-hidden="true" />
+                    <ComboboxInput
                         id={id}
-                        type="button"
+                        displayValue={(option: SearchableOption | null) => option?.label ?? ''}
+                        autoComplete="off"
                         className={cn(
-                            'group flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-left text-sm shadow-xs transition-colors',
-                            'hover:bg-accent/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                            'disabled:cursor-not-allowed disabled:opacity-50',
-                            hasError && 'border-destructive focus-visible:ring-destructive',
+                            'h-10 w-full rounded-md border border-input bg-background pr-20 pl-9 text-sm shadow-xs outline-hidden transition-colors',
+                            'placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30',
+                            hasError && 'border-destructive focus:border-destructive focus:ring-destructive/30',
+                            inputClassName,
                         )}
-                        aria-label={ariaLabel}
+                        onChange={(event) => setQuery(event.currentTarget.value)}
+                        onFocus={(event) => {
+                            if (selectedOption && !query) event.currentTarget.select();
+                        }}
+                        placeholder={placeholder}
+                        aria-label={ariaLabel ?? searchPlaceholder}
                         aria-describedby={describedBy}
                         aria-invalid={hasError || undefined}
-                    >
-                        <span className={cn('min-w-0 flex-1 truncate', !selectedOption && 'text-muted-foreground')}>
-                            {selectedOption?.label ?? placeholder}
-                        </span>
-                        <ChevronDown
-                            className={cn('text-muted-foreground size-4 shrink-0 transition-transform', open && 'rotate-180')}
-                            aria-hidden="true"
-                        />
-                    </ComboboxButton>
+                    />
+                    {query && !loading && (
+                        <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-11 z-10 -translate-y-1/2 rounded-sm p-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => setQuery('')}
+                            aria-label="Xóa từ khóa tìm kiếm"
+                        >
+                            <X className="size-3.5" aria-hidden="true" />
+                        </button>
+                    )}
                     {clearable && selectedOption && !disabled && (
                         <button
                             type="button"
@@ -150,49 +163,28 @@ export function SearchableSelect({
                             <X className="size-4" aria-hidden="true" />
                         </button>
                     )}
-                    <ComboboxOptions
-                        modal={false}
-                        className="absolute top-full left-0 z-50 mt-1 w-full min-w-64 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg ring-1 ring-black/5 empty:invisible"
+                    <ComboboxButton
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex w-9 items-center justify-center rounded-r-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={ariaLabel ? `Mở ${ariaLabel}` : 'Mở danh sách lựa chọn'}
                     >
-                        <div className="border-b p-2">
-                            <div className="relative">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
-                                <ComboboxInput
-                                    id={searchId}
-                                    value={query}
-                                    autoFocus
-                                    autoComplete="off"
-                                    className={cn(
-                                        'h-9 w-full rounded-md border border-input bg-background pr-9 pl-9 text-sm outline-hidden',
-                                        'placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30',
-                                        inputClassName,
-                                    )}
-                                    onChange={(event) => setQuery(event.currentTarget.value)}
-                                    placeholder={searchPlaceholder}
-                                    aria-label={ariaLabel ? `${ariaLabel} - tìm kiếm` : searchPlaceholder}
-                                />
-                                {query && !loading && (
-                                    <button
-                                        type="button"
-                                        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => setQuery('')}
-                                        aria-label="Xóa từ khóa tìm kiếm"
-                                    >
-                                        <X className="size-3.5" aria-hidden="true" />
-                                    </button>
-                                )}
-                                {loading && <LoaderCircle className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin" aria-hidden="true" />}
-                            </div>
-                        </div>
+                        <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} aria-hidden="true" />
+                    </ComboboxButton>
+                    <ComboboxOptions
+                        anchor="bottom start"
+                        portal
+                        modal={false}
+                        className="z-50 max-w-[calc(100vw-1rem)] min-w-64 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg ring-1 ring-black/5 empty:invisible [--anchor-gap:0.25rem] [--anchor-padding:0.5rem] w-[var(--input-width)]"
+                    >
+                        {loading && <LoaderCircle className="text-muted-foreground absolute top-3 right-3 size-4 animate-spin" aria-hidden="true" />}
                         <div className="max-h-64 overscroll-contain overflow-y-auto p-1 touch-pan-y">
                             {loading ? (
                                 <div className="text-muted-foreground flex items-center justify-center gap-2 px-3 py-5 text-sm" role="status">
                                     <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
                                     {loadingText}
                                 </div>
-                            ) : filteredOptions.length > 0 ? (
-                                filteredOptions.map((option) => (
+                            ) : visibleOptions.length > 0 ? (
+                                visibleOptions.map((option) => (
                                     <ComboboxOption
                                         key={option.value}
                                         value={option}

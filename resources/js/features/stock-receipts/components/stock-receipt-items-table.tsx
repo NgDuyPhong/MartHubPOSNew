@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { normalizeVietnamese } from '@/lib/vietnamese-search';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ProductUnit, StockReceiptFormData, StockReceiptRow } from '../model/types';
 
 export function StockReceiptItemsTable({
@@ -37,7 +37,11 @@ export function StockReceiptItemsTable({
                         {form.data.items.map((row, index) => (
                             <tr key={index} className="border-t">
                                 <td className="p-2">
-                                    <ProductUnitPicker productUnits={productUnits} value={row.product_unit_id} onChange={(value) => updateRow(index, { product_unit_id: value })} />
+                                    <ProductUnitPicker
+                                        productUnits={productUnits}
+                                        value={row.product_unit_id}
+                                        onChange={(value) => updateRow(index, { product_unit_id: value })}
+                                    />
                                 </td>
                                 <td className="p-2">
                                     <Input
@@ -96,38 +100,45 @@ export function StockReceiptItemsTable({
 }
 
 function ProductUnitPicker({ productUnits, value, onChange }: { productUnits: ProductUnit[]; value: number; onChange: (value: number) => void }) {
-    const selected = productUnits.find((item) => item.id === value);
-    const [search, setSearch] = useState('');
-    const [open, setOpen] = useState(false);
-    const options = useMemo(() => {
-        const needle = normalizeVietnamese(search);
-        return productUnits.filter((item) => !needle || normalizeVietnamese(`${item.variant.product.name} ${item.variant.product.sku} ${item.unit.code} ${item.unit.name} ${item.barcodes.map((barcode) => barcode.value).join(' ')}`).includes(needle)).slice(0, 40);
-    }, [productUnits, search]);
+    const options = useMemo(
+        () =>
+            productUnits.map((item) => ({
+                value: String(item.id),
+                label: `${item.variant.product.name} · ${item.unit.name}`,
+                searchText: `${item.variant.product.name} ${item.variant.product.sku} ${item.unit.code} ${item.unit.name} ${item.barcodes.map((barcode) => barcode.value).join(' ')}`,
+            })),
+        [productUnits],
+    );
+    const productUnitById = useMemo(() => new Map(productUnits.map((item) => [String(item.id), item])), [productUnits]);
 
     return (
-        <div className="relative">
-            <Input
-                role="combobox"
-                aria-expanded={open}
-                value={selected && !search ? `${selected.variant.product.name} · ${selected.unit.name}` : search}
-                placeholder="Tìm tên, SKU, barcode…"
-                onFocus={() => setOpen(true)}
-                onChange={(event) => {
-                    setSearch(event.target.value);
-                    setOpen(true);
-                }}
-            />
-            {open && (
-                <div className="bg-popover absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-md border p-1 shadow-lg">
-                    {options.map((item) => (
-                        <button type="button" key={item.id} className="hover:bg-accent w-full rounded px-2 py-2 text-left text-xs" onClick={() => { onChange(item.id); setSearch(''); setOpen(false); }}>
-                            <span className="font-medium">{item.variant.product.name} · {item.unit.name}</span>
-                            <span className="text-muted-foreground ml-1">{item.variant.product.sku} / {item.unit.code}</span>
-                        </button>
-                    ))}
-                    {!options.length && <p className="text-muted-foreground px-2 py-2 text-xs">Không tìm thấy đơn vị.</p>}
-                </div>
-            )}
-        </div>
+        <SearchableSelect
+            value={value ? String(value) : null}
+            options={options}
+            onValueChange={(selectedValue) => {
+                if (selectedValue) onChange(Number(selectedValue));
+            }}
+            placeholder="Tìm tên, SKU, barcode…"
+            searchPlaceholder="Tìm tên, SKU, barcode…"
+            emptyText="Không tìm thấy đơn vị."
+            maxVisibleOptions={40}
+            aria-label="Sản phẩm / quy cách"
+            optionContent={(option) => {
+                const item = productUnitById.get(option.value);
+
+                if (!item) return option.label;
+
+                return (
+                    <>
+                        <span className="font-medium">
+                            {item.variant.product.name} · {item.unit.name}
+                        </span>
+                        <span className="text-muted-foreground ml-1">
+                            {item.variant.product.sku} / {item.unit.code}
+                        </span>
+                    </>
+                );
+            }}
+        />
     );
 }
