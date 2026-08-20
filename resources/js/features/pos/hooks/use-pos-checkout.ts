@@ -2,7 +2,7 @@ import { firstValidationMessage } from '@/lib/http/errors';
 import { useEffect, useMemo, useState } from 'react';
 import { queueSale } from '../api/offline-sale-repository';
 import { createSale, type SalePayload } from '../api/pos-api';
-import { calculateCartTotals, hasStalePriceOverride, requiresOwnerOverride } from '../model/selectors';
+import { calculateCartTotals, hasStalePriceOverride, reconcileCartWithCatalog, requiresOwnerOverride } from '../model/selectors';
 import type { CartLine, CheckoutDraftSnapshot, Customer, Product, SaleReceipt, Shift } from '../model/types';
 import type { CheckoutErrors } from '../model/validation';
 import { validateCheckout } from '../model/validation';
@@ -44,6 +44,7 @@ type CheckoutOptions = {
     activeShift: Shift | null;
     online: boolean;
     customers: Customer[];
+    unavailableCartLineCount: number;
     clearCart: () => void;
     refreshPending: () => Promise<void>;
     onMessage: (message: string | null) => void;
@@ -69,7 +70,7 @@ export function usePosCheckout(options: CheckoutOptions) {
 
     useEffect(() => {
         setErrors({});
-    }, [cash, qr, customerId, qrConfirmed, options.cart]);
+    }, [cash, qr, customerId, qrConfirmed, options.cart, options.catalog, options.unavailableCartLineCount]);
 
     const checkout = async () => {
         const validationErrors = validateCheckout({
@@ -82,9 +83,10 @@ export function usePosCheckout(options: CheckoutOptions) {
             qrConfirmed,
             online: options.online,
             overrideNeeded,
+            unavailableCartLineCount: options.online ? 0 : options.unavailableCartLineCount,
         });
         setErrors(validationErrors);
-        const firstError = Object.values(validationErrors)[0];
+        let firstError = Object.values(validationErrors)[0];
 
         if (firstError || (!options.online && !options.activeShift)) {
             options.onMessage(firstError ?? 'Cần mở ca trước khi thanh toán.');
@@ -94,6 +96,9 @@ export function usePosCheckout(options: CheckoutOptions) {
         setProcessing(true);
         options.onMessage(null);
         let activeShift = options.activeShift;
+        let authoritativeUnavailableCartLineCount = options.unavailableCartLineCount;
+        let freshOverrideNeeded = overrideNeeded;
+        let authoritativeChecked = false;
         const makePayload = (shift: Shift): SalePayload => ({
             idempotency_key: crypto.randomUUID(),
             shift_id: shift.id,
@@ -120,8 +125,31 @@ export function usePosCheckout(options: CheckoutOptions) {
                 const freshData = await options.ensureFresh?.(customerId);
                 activeShift = freshData ? freshData.activeShift : activeShift;
                 freshCatalog = freshData?.catalog ?? freshCatalog;
+                authoritativeChecked = freshData !== undefined;
+                authoritativeUnavailableCartLineCount = Object.values(reconcileCartWithCatalog(options.cart, freshCatalog)).filter(
+                    ({ status }) => status === 'unavailable',
+                ).length;
+                freshOverrideNeeded = requiresOwnerOverride(options.cart) || hasStalePriceOverride(options.cart, freshCatalog);
+
+                const authoritativeValidationErrors = validateCheckout({
+                    ...totals,
+                    cart: options.cart,
+                    cash,
+                    qr,
+                    total: totals.total,
+                    customerId,
+                    qrConfirmed,
+                    online: options.online,
+                    overrideNeeded: freshOverrideNeeded,
+                    unavailableCartLineCount: authoritativeUnavailableCartLineCount,
+                });
+                setErrors(authoritativeValidationErrors);
+                firstError = Object.values(authoritativeValidationErrors)[0];
+                if (firstError) {
+                    options.onMessage(firstError);
+                    return;
+                }
             }
-            const freshOverrideNeeded = requiresOwnerOverride(options.cart) || hasStalePriceOverride(options.cart, freshCatalog);
             if (freshOverrideNeeded && !ownerPin) {
                 options.onMessage('Giá hiện tại đã thay đổi hoặc dòng hàng có sửa giá. Hãy nhập PIN chủ cửa hàng rồi thử lại.');
                 return;
@@ -136,7 +164,12 @@ export function usePosCheckout(options: CheckoutOptions) {
             if (options.refreshAfterSale) void options.refreshAfterSale().catch(() => undefined);
             reset();
         } catch (error) {
-            if (payload && (!navigator.onLine || error instanceof TypeError) && !overrideNeeded) {
+            if (
+                payload &&
+                (!navigator.onLine || error instanceof TypeError) &&
+                !freshOverrideNeeded &&
+                !(options.online && options.unavailableCartLineCount > 0 && !authoritativeChecked)
+            ) {
                 const offlineShift = activeShift ?? options.activeShift;
                 if (!offlineShift) {
                     options.onMessage('Cần mở ca trước khi thanh toán.');

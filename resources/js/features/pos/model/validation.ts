@@ -10,15 +10,20 @@ export type CheckoutDraft = {
     qrConfirmed: boolean;
     online: boolean;
     overrideNeeded: boolean;
+    unavailableCartLineCount: number;
 };
 
-export type CheckoutErrors = Partial<Record<'cart' | 'customerId' | 'qr' | 'cash' | 'discount' | 'quantity' | 'offline', string>>;
+export type CheckoutErrors = Partial<Record<'cart' | 'customerId' | 'qr' | 'cash' | 'discount' | 'quantity' | 'offline' | 'unavailable', string>>;
 
 export function validateCheckout(draft: CheckoutDraft): CheckoutErrors {
     const errors: CheckoutErrors = {};
 
     if (!draft.cart.length) {
         errors.cart = 'Giỏ hàng đang trống.';
+    }
+
+    if (draft.unavailableCartLineCount > 0) {
+        errors.unavailable = 'Có sản phẩm không còn khả dụng. Hãy xóa dòng hàng đó và chọn sản phẩm khác trước khi thanh toán.';
     }
 
     if (draft.cash < 0 || !Number.isInteger(draft.cash)) {

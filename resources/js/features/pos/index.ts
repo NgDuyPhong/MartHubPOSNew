@@ -19,6 +19,7 @@ export { useConnectivity } from './hooks/use-connectivity';
 export { usePosCart } from './hooks/use-pos-cart';
 export { usePosCarts } from './hooks/use-pos-carts';
 export { usePosCheckout } from './hooks/use-pos-checkout';
+export { usePosResourceRefresh } from './hooks/use-pos-resource-refresh';
 export { usePosShortcuts } from './hooks/use-pos-shortcuts';
 export {
     buildCatalogSearchIndex,
@@ -29,8 +30,10 @@ export {
     findBarcodeMatchWithIndex,
     getDefaultSellableSelection,
     hasStalePriceOverride,
+    reconcileCartWithCatalog,
     requiresOwnerOverride,
 } from './model/selectors';
+export type { CartLineReconciliation, CartLineReconciliationStatus, CartReconciliation } from './model/selectors';
 export type {
     CartDraft,
     CartLine,

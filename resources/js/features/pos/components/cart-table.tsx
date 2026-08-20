@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
-import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { AlertTriangle, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { CartReconciliation } from '../model/selectors';
 import type { CartLine } from '../model/types';
 
 export function CartTable({
     cart,
+    reconciliation,
     selectedKey,
     online,
     onSelect,
@@ -15,6 +17,7 @@ export function CartTable({
     onRemove,
 }: {
     cart: CartLine[];
+    reconciliation: CartReconciliation;
     selectedKey: string | null;
     online: boolean;
     onSelect: (key: string) => void;
@@ -68,7 +71,9 @@ export function CartTable({
                                         onSelect(line.key);
                                     }
                                 }}
-                                className={`focus-visible:ring-ring border-t focus-visible:ring-2 ${selectedKey === line.key ? 'bg-accent' : ''}`}
+                                className={`focus-visible:ring-ring border-t focus-visible:ring-2 ${selectedKey === line.key ? 'bg-accent' : ''} ${
+                                    reconciliation[line.key]?.status === 'unavailable' ? 'bg-destructive/5' : ''
+                                }`}
                             >
                                 <td className="px-3 py-2">
                                     <div className="font-medium">{line.product.name}</div>
@@ -76,6 +81,30 @@ export function CartTable({
                                         {line.productUnit.unit.name} · 1 {line.productUnit.unit.code} = {Number(line.productUnit.conversion_to_base)}{' '}
                                         đơn vị gốc
                                     </div>
+                                    {reconciliation[line.key]?.status === 'unavailable' && (
+                                        <div className="text-destructive mt-1 flex items-center gap-1 text-xs" role="status">
+                                            <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                                            Không còn bán. Xóa dòng và chọn sản phẩm khác.
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-destructive h-auto px-1 py-0 text-xs"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    onRemove(line.key);
+                                                }}
+                                            >
+                                                Xóa dòng
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {reconciliation[line.key]?.status === 'price_changed' && (
+                                        <div className="text-warning mt-1 flex items-center gap-1 text-xs" role="status">
+                                            <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                                            Giá catalog đã đổi; giá trong giỏ vẫn được giữ nguyên.
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="px-2 py-2">
                                     <QuantityInput line={line} onUpdate={onUpdate} onRemove={onRemove} />

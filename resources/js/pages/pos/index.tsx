@@ -8,11 +8,13 @@ import {
     getLastReceipt,
     getPosFreshness,
     getPosSnapshot,
+    reconcileCartWithCatalog,
     saveLastReceipt,
     useCatalogSearch,
     useConnectivity,
     usePosCarts,
     usePosCheckout,
+    usePosResourceRefresh,
     usePosShortcuts,
     type CartLine,
     type CategoryOption,
@@ -55,6 +57,8 @@ type PosProps = {
     versions: PosVersions;
     snapshotScope: { organizationId: number; branchId: number };
 };
+
+const posResourceRefreshErrorMessage = 'Không thể làm mới dữ liệu POS. Hãy kiểm tra kết nối rồi thử lại khi quay lại POS.';
 
 export default function PosPage({
     catalog,
@@ -128,21 +132,15 @@ export default function PosPage({
         renameCart,
         deleteCart,
     } = usePosCarts(scopeKey);
-    const hasStaleCartPrice = useMemo(
-        () =>
-            cart.some(
-                (line) =>
-                    currentCatalog
-                        .find((item) => item.id === line.product.id)
-                        ?.variants.flatMap((variant) => variant.units)
-                        .find((unit) => unit.id === line.productUnit.id)?.sale_price !== line.productUnit.sale_price,
-            ),
-        [cart, currentCatalog],
+    const cartReconciliation = useMemo(() => reconcileCartWithCatalog(cart, currentCatalog), [cart, currentCatalog]);
+    const hasStaleCartPrice = useMemo(() => Object.values(cartReconciliation).some(({ status }) => status === 'price_changed'), [cartReconciliation]);
+    const unavailableCartLineCount = useMemo(
+        () => Object.values(cartReconciliation).filter(({ status }) => status === 'unavailable').length,
+        [cartReconciliation],
     );
     const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(currentCatalog, query, categoryId);
     const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
-    const refreshPosResources = useCallback(async (resources: string[]) => {
-        const snapshot = await getPosSnapshot(resources);
+    const applyPosSnapshot = useCallback((snapshot: Awaited<ReturnType<typeof getPosSnapshot>>) => {
         if (snapshot.catalog) setCurrentCatalog(snapshot.catalog);
         if (snapshot.categories) setCurrentCategories(snapshot.categories);
         if (snapshot.customers) {
@@ -153,9 +151,16 @@ export default function PosPage({
         if (snapshot.expiryAlerts !== undefined) setCurrentExpiryAlerts(snapshot.expiryAlerts);
         if (snapshot.latestReceipt !== undefined && snapshot.latestReceipt) setStoredReceipt(snapshot.latestReceipt);
         setCurrentVersions(snapshot.versions);
-
-        return snapshot;
     }, []);
+    const refreshPosResources = useCallback(
+        async (resources: string[]) => {
+            const snapshot = await getPosSnapshot(resources);
+            applyPosSnapshot(snapshot);
+
+            return snapshot;
+        },
+        [applyPosSnapshot],
+    );
     const refreshAfterSale = useCallback(
         () => refreshPosResources(['catalog', 'categories', 'customers', 'expiryAlerts']).then(() => undefined),
         [refreshPosResources],
@@ -198,18 +203,9 @@ export default function PosPage({
             if (selectedCustomerId && !freshCustomers.some((customer) => customer.id === selectedCustomerId && customer.is_active !== false)) {
                 throw new Error('Khách hàng đã ngừng sử dụng hoặc không còn hợp lệ. Hãy chọn lại khách hàng.');
             }
-            for (const line of cart) {
-                const freshUnit = freshCatalog
-                    .flatMap((product) => product.variants.flatMap((variant) => variant.units.map((unit) => ({ product, variant, unit }))))
-                    .find(({ unit }) => unit.id === line.productUnit.id);
-                if (!freshUnit) {
-                    throw new Error(`Sản phẩm ${line.product.name} không còn khả dụng. Hãy xóa dòng hàng và chọn sản phẩm khác.`);
-                }
-            }
-
             return { activeShift: freshShift, catalog: freshCatalog };
         },
-        [cart, currentActiveShift, currentCatalog, currentCustomers, currentVersions, refreshPosResources],
+        [currentActiveShift, currentCatalog, currentCustomers, currentVersions, refreshPosResources],
     );
     const { online, pendingCount, records, refreshPending, syncNow, retry, reprice } = useConnectivity({
         catalog: currentCatalog,
@@ -220,6 +216,18 @@ export default function PosPage({
         onReconnect: refreshAfterSync,
         onRefreshCatalog: refreshCatalogForReprice,
         onCacheError,
+    });
+    const onResourceRefreshError = useCallback(() => setMessage(posResourceRefreshErrorMessage), []);
+    const onResourceRefreshRecovered = useCallback(() => {
+        setMessage((current) => (current === posResourceRefreshErrorMessage ? null : current));
+    }, []);
+    usePosResourceRefresh({
+        versions: currentVersions,
+        online,
+        onSnapshot: applyPosSnapshot,
+        onVersions: setCurrentVersions,
+        onError: onResourceRefreshError,
+        onSuccess: onResourceRefreshRecovered,
     });
     const handleReprice = useCallback(
         async (idempotencyKey: string) => {
@@ -299,6 +307,7 @@ export default function PosPage({
         activeShift: currentActiveShift,
         online,
         customers: customerOptions,
+        unavailableCartLineCount,
         clearCart,
         refreshPending,
         onMessage: setMessage,
@@ -463,6 +472,11 @@ export default function PosPage({
                         Giá catalog đã thay đổi; dòng hàng đang có trong giỏ vẫn giữ giá cũ. Sản phẩm thêm mới sẽ dùng giá hiện tại.
                     </div>
                 )}
+                {unavailableCartLineCount > 0 && (
+                    <div className="bg-destructive/10 text-destructive border-destructive/30 mb-2 rounded-md border px-3 py-2 text-sm" role="alert">
+                        Có {unavailableCartLineCount} dòng hàng không còn khả dụng. Hãy xóa dòng đó và chọn sản phẩm khác trước khi thanh toán.
+                    </div>
+                )}
                 <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
                         categories={currentCategories}
@@ -492,6 +506,7 @@ export default function PosPage({
                         />
                         <CartTable
                             cart={cart}
+                            reconciliation={cartReconciliation}
                             selectedKey={selectedKey}
                             online={online}
                             onSelect={selectLine}

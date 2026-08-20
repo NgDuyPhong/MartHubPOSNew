@@ -1,5 +1,5 @@
 import { normalizeVietnamese } from '@/lib/vietnamese-search';
-import type { CartLine, CartTotals, Product } from './types';
+import type { CartLine, CartTotals, Product, ProductUnit, Variant } from './types';
 
 export type BarcodeMatch = { product: Product; variant: CartLine['variant']; unit: CartLine['productUnit'] };
 
@@ -8,6 +8,17 @@ export type CatalogSearchIndex = {
     records: Array<{ product: Product; searchableText: string }>;
     barcodeMatches: Map<string, BarcodeMatch>;
 };
+
+export type CartLineReconciliationStatus = 'available' | 'price_changed' | 'unavailable';
+
+export type CartLineReconciliation = {
+    status: CartLineReconciliationStatus;
+    product?: Product;
+    variant?: Variant;
+    productUnit?: ProductUnit;
+};
+
+export type CartReconciliation = Record<string, CartLineReconciliation>;
 
 /**
  * Stable catalog identity used to keep the search index across Inertia prop
@@ -98,6 +109,36 @@ export function calculateCartTotals(cart: CartLine[], cash: number, qr: number):
         debt: total - paid,
         changeAmount: Math.max(0, cash + qr - total),
     };
+}
+
+export function reconcileCartWithCatalog(cart: CartLine[], catalog: Product[]): CartReconciliation {
+    const unitsById = new Map<number, { product: Product; variant: Variant; productUnit: ProductUnit }>();
+
+    for (const product of catalog) {
+        for (const variant of product.variants) {
+            for (const productUnit of variant.units) {
+                unitsById.set(productUnit.id, { product, variant, productUnit });
+            }
+        }
+    }
+
+    return Object.fromEntries(
+        cart.map((line) => {
+            const current = unitsById.get(line.productUnit.id);
+
+            if (!current) {
+                return [line.key, { status: 'unavailable' as const }];
+            }
+
+            return [
+                line.key,
+                {
+                    status: current.productUnit.sale_price !== line.productUnit.sale_price ? ('price_changed' as const) : ('available' as const),
+                    ...current,
+                },
+            ];
+        }),
+    );
 }
 
 export function getDefaultSellableSelection(product: Product): { variant: CartLine['variant']; unit: CartLine['productUnit'] } | null {
