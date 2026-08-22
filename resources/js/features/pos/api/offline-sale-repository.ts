@@ -8,6 +8,7 @@ const LAST_RECEIPT_KEY_PREFIX = 'last-receipt:';
 export type PendingSalePayload = {
     idempotency_key: string;
     shift_id: number;
+    original_actor_id?: number;
     customer_id: number | null;
     source: 'online' | 'offline_sync';
     occurred_at?: string;

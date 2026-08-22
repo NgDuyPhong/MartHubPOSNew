@@ -58,6 +58,6 @@ class LegacyImportController extends Controller
 
     private function ensureOperator(Request $request): void
     {
-        abort_unless(in_array($request->user()?->role, ['owner', 'manager'], true), 403);
+        abort_unless($request->user()?->hasCapability('import.legacy') === true, 403);
     }
 }

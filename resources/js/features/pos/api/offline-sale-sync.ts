@@ -21,9 +21,15 @@ function errorDetails(error: unknown, record: PendingSale): { code: string; mess
             Object.keys(error.validationErrors).some((key) => key === 'owner_pin');
 
         return {
-            code: requiresReprice ? PRICE_REPRICE_REQUIRED_CODE : `HTTP_${error.status}`,
+            code: requiresReprice
+                ? PRICE_REPRICE_REQUIRED_CODE
+                : Object.keys(error.validationErrors).includes('original_actor_id')
+                  ? 'ACTOR_RECOVERY_REQUIRED'
+                  : error.status === 401
+                    ? 'ACCOUNT_INACTIVE'
+                    : 'HTTP_' + error.status,
             message: validationMessage ?? error.message,
-            conflict: error.status === 409 || error.status === 422,
+            conflict: error.status === 401 || error.status === 403 || error.status === 409 || error.status === 422,
         };
     }
 

@@ -8,7 +8,7 @@ class OpenShiftRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('shift.open') === true;
     }
 
     public function rules(): array

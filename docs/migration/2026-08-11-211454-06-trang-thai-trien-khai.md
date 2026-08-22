@@ -1,6 +1,6 @@
 # Trạng thái triển khai
 
-Cập nhật: 2026-08-13.
+Cập nhật: 2026-08-22. Tên file giữ nguyên timestamp tạo tài liệu theo quy ước dự án.
 
 ## Đã triển khai trong source
 
@@ -16,11 +16,11 @@ Cập nhật: 2026-08-13.
 | Shift/register | Hoàn thành luồng chính | Shared shift, opening float, thu/chi, kiểm đếm và variance |
 | Sale snapshot | Hoàn thành | Item/unit/conversion/price/cost snapshot, reprint 58 mm |
 | Return/exchange | Hoàn thành luồng chính | Partial return, giới hạn số đã bán, stock/payment/debt reversal |
-| Offline | Hoàn thành nền tảng | Service worker, IndexedDB queue, auto sync và idempotency |
+| Offline | Hoàn thành nền tảng, chưa production-ready | Service worker, IndexedDB queue, auto sync, idempotency, Sync Center, retry/conflict, reprice và export recovery JSON đã có; actor mismatch đã fail-closed và giữ queue conflict; persistent-storage gate, chưa có đường restore/import được diễn tập đầy đủ và explicit recovery policy chưa hoàn tất |
 | Dashboard | Hoàn thành cơ bản | Doanh thu, cash/QR, nợ, tồn âm và cận hạn |
 | Product image | Hoàn thành | Lưu persistent folder qua public storage disk |
 
-## Đã kiểm tra tự động trong giai đoạn triển khai
+## Tình trạng kiểm tra tự động
 
 - toàn bộ migration đã chạy trên SQLite local;
 - production frontend build thành công;
@@ -28,6 +28,9 @@ Cập nhật: 2026-08-13.
 - Pint style check thành công;
 - smoke transaction bán hàng/công nợ/thu nợ/return/chốt ca thành công và rollback;
 - scheduler nhận job cảnh báo hạn dùng.
+- source hiện có Pest feature/unit tests cho các luồng nghiệp vụ, migration và authorization liên quan; không còn đúng khi mô tả toàn bộ unit/feature test là “để sau”;
+- lần chạy full suite ngày 22/08/2026 bằng `php artisan test --compact` có **67 test pass (300 assertions), 3 test fail**. Hai failure trong `RegistrationTest` vẫn kỳ vọng public registration dù tính năng này đã chủ đích tắt; một failure trong `ExampleTest` vẫn kỳ vọng `/` trả `200` dù route hiện redirect `302`. Đây là starter-test expectation đã lỗi thời, chưa phải bằng chứng luồng nghiệp vụ thất bại, nhưng suite vẫn chưa green và phải được cập nhật trong hardening;
+- chưa có frontend test runner trong `package.json`. Quyết định hiện tại là bổ sung Vitest + React Testing Library có phạm vi hẹp cho regression P0 ở Phase 0B; browser UAT vẫn bắt buộc cho scanner, focus, offline storage và print.
 
 ## Đã triển khai fast path export/import legacy
 
@@ -53,7 +56,7 @@ php artisan legacy:import storage/app/private/legacy-exports/marthub-legacy-<exp
 
 Các command và UI trên là fast path vận hành server; chưa coi là cutover production cho đợt dữ liệu lớn.
 
-Unit test, feature test và browser E2E vẫn để ở milestone hardening theo quyết định của chủ dự án.
+Affected Pest tests cho security, money, inventory, idempotency và mọi thay đổi P0 phải đi cùng từng vertical slice. Full browser/device UAT và phần coverage mở rộng vẫn thuộc hardening, nhưng không được dùng lý do “để sau” để bỏ regression test bắt buộc.
 
 ## Chưa được coi là sẵn sàng cutover
 
@@ -62,8 +65,8 @@ Unit test, feature test và browser E2E vẫn để ở milestone hardening theo
 3. Importer có kill switch `LEGACY_PRODUCT_IMPORT_ENABLED`; sau cutover có thể khóa route/menu và gỡ feature code mà không ảnh hưởng catalog đã nhập.
 4. Chưa rehearsal migration đầy đủ trên MySQL staging và chưa kiểm tra tương thích volume production.
 5. Chưa UAT trực quan trên đúng độ phân giải quầy, scanner và máy in nhiệt 58 mm.
-6. Offline hiện có durable sale queue và retry cơ bản; màn hình xử lý conflict/export recovery queue nâng cao vẫn thuộc milestone offline hardening.
-7. Chưa triển khai supplier/purchase order, hóa đơn điện tử, loyalty và multi-branch nâng cao vì nằm ngoài phạm vi phiên bản đầu.
+6. Offline đã có durable sale queue, Sync Center, retry/conflict, reprice và export recovery JSON; chưa có startup gate cho storage persistence, đường restore/import được diễn tập đầy đủ, actor takeover khi quyền bị thu hồi và runbook mất browser/device hoàn chỉnh.
+7. Chưa triển khai supplier/purchase order, loyalty và multi-branch nâng cao vì nằm ngoài phạm vi phiên bản đầu. Hóa đơn điện tử không còn mặc định được coi là tính năng hậu kỳ: compliance discovery phải xác định nghĩa vụ; nếu thuộc diện áp dụng thì tax model, invoice lifecycle và provider adapter tối thiểu là go-live blocker.
 8. Dependency audit còn cảnh báo transitive từ `exceljs`; không dùng `xlsx` vì package đó có advisory nghiêm trọng. Cần theo dõi bản cập nhật hoặc chuyển parsing Excel sang backend trước production.
 
 ## Bước tiếp theo
@@ -73,5 +76,6 @@ Unit test, feature test và browser E2E vẫn để ở milestone hardening theo
 3. Bổ sung progress/retry queue và exception/reconciliation report tải xuống cho production volume.
 4. UAT barcode, giá bán, unit conversion, ảnh, tồn kho âm và đối chiếu số lượng sản phẩm.
 5. Chốt nội dung hóa đơn 58 mm và kiểm thử trên máy in thật.
-6. Hoàn thiện queue conflict/recovery, monitoring production và cân nhắc UI export authenticated ở source cũ.
-7. Sau khi toàn bộ chức năng được nghiệm thu, thực hiện unit/feature/E2E test và hardening.
+6. Hoàn thiện persistent-storage gate, recovery restore/import, policy actor takeover, monitoring production và cân nhắc UI export authenticated ở source cũ.
+7. Thiết lập frontend regression harness P0; cập nhật ba starter test đang lỗi thời và tiếp tục viết affected Pest/frontend test cùng từng vertical slice, không chờ toàn bộ chức năng được nghiệm thu.
+8. Hoàn thành compliance discovery với kế toán/người có thẩm quyền và provider; nếu thuộc diện áp dụng, đưa tax model/invoice lifecycle/adapter tối thiểu vào go-live gate.

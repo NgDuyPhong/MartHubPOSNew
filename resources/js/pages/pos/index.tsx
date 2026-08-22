@@ -42,7 +42,8 @@ import {
 import { VariantUnitPicker } from '@/features/pos/components/variant-unit-picker';
 import { ProductQuickEditSheet } from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm, usePoll } from '@inertiajs/react';
+import type { SharedData } from '@/types';
+import { Head, useForm, usePage, usePoll } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type PosProps = {
@@ -72,6 +73,7 @@ export default function PosPage({
     versions,
     snapshotScope,
 }: PosProps) {
+    const { props } = usePage<SharedData>();
     const [currentCatalog, setCurrentCatalog] = useState<Product[]>(catalog);
     const [currentCategories, setCurrentCategories] = useState<CategoryOption[]>(categories);
     const [currentCustomers, setCurrentCustomers] = useState<Customer[]>(customers);
@@ -301,6 +303,7 @@ export default function PosPage({
         [scopeKey],
     );
     const checkout = usePosCheckout({
+        actorId: props.auth.user.id,
         cart,
         catalog: currentCatalog,
         scopeKey,

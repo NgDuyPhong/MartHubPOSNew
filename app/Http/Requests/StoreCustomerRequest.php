@@ -8,7 +8,7 @@ class StoreCustomerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('customer.manage') === true;
     }
 
     public function rules(): array

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
 {
-    protected $fillable = ['public_id', 'branch_id', 'shift_id', 'user_id', 'customer_id', 'invoice_number', 'status', 'source', 'subtotal', 'discount_amount', 'total', 'paid_amount', 'debt_amount', 'change_amount', 'note', 'sold_at', 'synced_at'];
+    protected $fillable = ['public_id', 'branch_id', 'shift_id', 'user_id', 'original_actor_id', 'recovered_by', 'customer_id', 'invoice_number', 'status', 'source', 'subtotal', 'discount_amount', 'total', 'paid_amount', 'debt_amount', 'change_amount', 'note', 'sold_at', 'synced_at'];
 
     protected function casts(): array
     {
@@ -33,6 +33,16 @@ class Sale extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function originalActor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'original_actor_id');
+    }
+
+    public function recoveredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recovered_by');
     }
 
     public function shift(): BelongsTo

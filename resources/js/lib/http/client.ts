@@ -16,7 +16,7 @@ export async function requestJson<T>(url: string, init: JsonRequestInit = {}): P
         const token = getCsrfToken();
 
         if (token) {
-            headers.set('X-CSRF-TOKEN', token);
+            headers.set(token.header, token.value);
         }
     }
 

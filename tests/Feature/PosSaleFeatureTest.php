@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ApprovalEvent;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\Product;
@@ -89,4 +90,36 @@ test('offline sale with a stale price is rejected until it is repriced online', 
 
     $response->assertUnprocessable()->assertJsonValidationErrors('owner_pin');
     expect($fixture['shift']->sales()->count())->toBe(0);
+});
+
+test('owner pin failures remain throttled and audited after the sale transaction rolls back', function () {
+    $fixture = saleFixture();
+    $fixture['user']->update(['approval_pin_hash' => Hash::make('1234')]);
+
+    foreach (range(1, 5) as $attempt) {
+        $response = $this->actingAs($fixture['user'])->postJson(route('sales.store'), [
+            'idempotency_key' => (string) Str::uuid(),
+            'shift_id' => $fixture['shift']->id,
+            'source' => 'online',
+            'owner_pin' => '9999',
+            'items' => [['product_unit_id' => $fixture['productUnit']->id, 'quantity' => 1, 'unit_price' => 9000]],
+            'payments' => [['method' => 'cash', 'amount' => 9000]],
+        ]);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors('owner_pin');
+    }
+
+    $response = $this->actingAs($fixture['user'])->postJson(route('sales.store'), [
+        'idempotency_key' => (string) Str::uuid(),
+        'shift_id' => $fixture['shift']->id,
+        'source' => 'online',
+        'owner_pin' => '9999',
+        'items' => [['product_unit_id' => $fixture['productUnit']->id, 'quantity' => 1, 'unit_price' => 9000]],
+        'payments' => [['method' => 'cash', 'amount' => 9000]],
+    ]);
+
+    $response->assertUnprocessable()->assertJsonValidationErrors('owner_pin');
+    expect($response->json('errors.owner_pin.0'))->toContain('Đã nhập sai PIN quá nhiều lần');
+    expect(ApprovalEvent::query()->where('requested_by', $fixture['user']->id)->where('action', 'sale_price_or_discount_override')->where('status', 'rejected')->count())->toBe(6)
+        ->and($fixture['shift']->sales()->count())->toBe(0);
 });

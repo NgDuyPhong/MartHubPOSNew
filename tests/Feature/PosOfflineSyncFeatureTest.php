@@ -71,3 +71,29 @@ test('online sale cannot be written to a closed shift', function () {
         'payments' => [['method' => 'cash', 'amount' => 5000]],
     ])->assertUnprocessable()->assertJsonValidationErrors('shift_id');
 });
+
+test('offline sale with another actor remains a recovery conflict', function () {
+    $fixture = offlineFixture();
+    $originalActor = User::factory()->create([
+        'organization_id' => $fixture['organization']->id,
+        'branch_id' => $fixture['branch']->id,
+        'role' => 'cashier',
+        'is_active' => true,
+    ]);
+
+    $payload = [
+        'idempotency_key' => (string) Str::uuid(),
+        'shift_id' => $fixture['shift']->id,
+        'original_actor_id' => $originalActor->id,
+        'source' => 'offline_sync',
+        'occurred_at' => $fixture['closedAt']->copy()->subMinutes(20)->toISOString(),
+        'items' => [['product_unit_id' => $fixture['productUnit']->id, 'quantity' => 1]],
+        'payments' => [['method' => 'cash', 'amount' => 5000]],
+    ];
+
+    $this->actingAs($fixture['user'])->postJson(route('sales.store'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('original_actor_id');
+
+    expect($fixture['shift']->sales()->count())->toBe(0);
+});

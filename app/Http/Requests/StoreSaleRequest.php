@@ -9,7 +9,7 @@ class StoreSaleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('pos.sell') === true;
     }
 
     public function rules(): array
@@ -17,6 +17,7 @@ class StoreSaleRequest extends FormRequest
         return [
             'idempotency_key' => ['required', 'uuid'],
             'shift_id' => ['required', 'exists:shifts,id'],
+            'original_actor_id' => ['nullable', 'integer', 'exists:users,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'source' => ['required', Rule::in(['online', 'offline_sync'])],
             'occurred_at' => ['nullable', 'date'],

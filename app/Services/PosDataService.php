@@ -19,12 +19,14 @@ class PosDataService
     /** @return array<string, mixed> */
     public function bootstrap(User $user): array
     {
+        $registers = $this->availableRegisters($user);
+
         return [
             'catalog' => $this->catalog($user),
             'categories' => $this->categories($user),
             'customers' => $this->customers($user),
             'activeShift' => $this->activeShift($user),
-            'registers' => Register::query()->where('branch_id', $user->branch_id)->where('is_active', true)->get(['id', 'name']),
+            'registers' => $registers,
             'expiryAlerts' => $this->expiryAlerts($user),
             'canManageCatalog' => $user->canManageCatalog(),
             'latestReceipt' => $this->latestReceipt($user),
@@ -105,7 +107,17 @@ class PosDataService
     /** @return array<string, mixed>|null */
     private function activeShift(User $user): ?array
     {
-        $shift = Shift::query()->select(['id', 'register_id', 'opened_by', 'code', 'opening_cash', 'opened_at'])->where('status', 'open')->whereHas('register', fn ($query) => $query->where('branch_id', $user->branch_id))->with(['register:id,name', 'openedBy:id,name'])->first();
+        $registers = $this->availableRegisters($user);
+        if ($registers->count() !== 1) {
+            return null;
+        }
+
+        $shift = Shift::query()
+            ->select(['id', 'register_id', 'opened_by', 'code', 'opening_cash', 'opened_at'])
+            ->where('status', 'open')
+            ->where('register_id', $registers->first()->id)
+            ->with(['register:id,name', 'openedBy:id,name'])
+            ->first();
 
         return $shift ? [
             'id' => $shift->id,
@@ -115,6 +127,18 @@ class PosDataService
             'opened_by' => $shift->openedBy ? ['name' => $shift->openedBy->name] : null,
             'register' => ['name' => $shift->register->name],
         ] : null;
+    }
+
+    /** @return Collection<int, Register> */
+    private function availableRegisters(User $user): Collection
+    {
+        $registers = Register::query()
+            ->where('branch_id', $user->branch_id)
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get(['id', 'name']);
+
+        return $registers->count() === 1 ? $registers : collect();
     }
 
     private function expiryAlerts(User $user): int

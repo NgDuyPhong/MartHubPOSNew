@@ -9,7 +9,7 @@ class StoreDebtPaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('debt.collect') === true;
     }
 
     public function rules(): array

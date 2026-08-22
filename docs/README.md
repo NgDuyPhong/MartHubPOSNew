@@ -25,7 +25,7 @@ Không bắt buộc giữ role hay giao diện mặc định của starter kit. 
 4. Các mục menu cũ chưa có route thật (`Kho hàng`, `Khách hàng`, `Báo cáo`) không được xem là parity đã hoàn thành. Chúng vẫn được đưa vào backlog để hoàn thiện sản phẩm mới.
 5. Không tái sử dụng nguyên khối migrations, controllers hoặc mô hình pricing cũ. Dữ liệu legacy được đưa sang bằng ETL có mapping và đối soát.
 6. Không cutover chỉ dựa trên việc “đã có màn hình”. Mỗi luồng phải đạt acceptance criteria về nghiệp vụ, dữ liệu, quyền, responsive và bàn phím.
-7. Unit test được hoãn đến sau khi hoàn tất toàn bộ chức năng; chủ dự án sẽ thực hiện giai đoạn này. Trong khi phát triển vẫn chạy migration/build/type-check/lint và smoke test tối thiểu để bảo đảm source có thể tích hợp.
+7. Full test coverage, component test diện rộng và E2E suite có thể hoàn thiện theo giai đoạn sau. Affected tests cho authorization/account lifecycle, money, inventory, shift/register concurrency, idempotency và regression P0 bắt buộc đi cùng thay đổi; không dùng smoke test thay cho các invariant này. Trong khi phát triển vẫn chạy migration/build/type-check/lint và smoke/UAT tối thiểu theo phạm vi ảnh hưởng.
 8. Cấu hình hiện tại được chốt cho một cửa hàng, một chi nhánh và một máy POS; vẫn giữ `branch_id`/`device_id` trong dữ liệu để tránh khóa khả năng mở rộng.
 9. SQLite dùng cho phát triển local, MySQL là môi trường production và là database bắt buộc cho rehearsal/cutover.
 10. Dữ liệu MySQL legacy một năm được chuyển bằng ETL có dry-run, mapping và đối soát; không dùng trực tiếp schema cũ cho application mới.
@@ -42,6 +42,7 @@ Không bắt buộc giữ role hay giao diện mặc định của starter kit. 
 
 ## Kế hoạch chuyên đề
 
+- [2026-08-21-204944-DANH-GIA-SOURCE-UX-VA-ROADMAP-MINIMART.md](2026-08-21-204944-DANH-GIA-SOURCE-UX-VA-ROADMAP-MINIMART.md): audit delta của source POS hiện tại, các rủi ro UX/an toàn còn lại và roadmap tính năng phù hợp cho siêu thị mini theo phase.
 - [2026-08-14-222010-PLAN-NANG-CAP-UX-TOAN-DIEN.md](2026-08-14-222010-PLAN-NANG-CAP-UX-TOAN-DIEN.md): audit và roadmap UX toàn hệ thống, gồm search/filter/pagination cho các collection và sửa nhanh sản phẩm từ màn POS.
 - [2026-08-13-233731-PLAN-TOI-UU-POS-CATALOG-SEARCH.md](2026-08-13-233731-PLAN-TOI-UU-POS-CATALOG-SEARCH.md): tối ưu riêng cho search, barcode và rendering catalog POS.
 - [2026-08-12-185415-PLAN-REFACTOR-FRONTEND.md](2026-08-12-185415-PLAN-REFACTOR-FRONTEND.md): kiến trúc feature, dependency boundary và lộ trình refactor frontend.
@@ -56,8 +57,11 @@ Baseline + quyết định nghiệp vụ
   → hóa đơn/hoàn tác/in
   → offline + đồng bộ
   → migration rehearsal + UAT
-  → unit test và hardening sau khi hoàn tất chức năng
+  → mở rộng component/E2E coverage và hardening theo rủi ro
   → cutover
+
+Affected tests cho quyền, tiền, tồn, ca và idempotency
+chạy cùng từng vertical slice ở toàn bộ chuỗi trên.
 ```
 
 Các phần khách hàng, kho vận hành và báo cáo được làm song song theo dependency, nhưng không được làm chậm parity của luồng bán hàng cốt lõi.

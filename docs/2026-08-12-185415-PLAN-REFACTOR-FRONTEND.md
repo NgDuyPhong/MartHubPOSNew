@@ -1,5 +1,7 @@
 # Kế hoạch refactor frontend MartHub POS
 
+> Cập nhật quyết định quality gate: 22/08/2026. Tên file giữ nguyên timestamp tạo tài liệu theo quy ước dự án.
+
 ## 1. Kết luận kiến trúc hiện tại
 
 Frontend hiện tại **không được tổ chức theo Atomic Design đầy đủ**.
@@ -575,22 +577,28 @@ Thực hiện từng feature, không di chuyển tất cả cùng lúc.
 
 ## 11. Pha 5 — Quality gates và UAT
 
-### Phạm vi hiện tại
+### Quyết định cập nhật ngày 22/08/2026
 
-- Không viết frontend Unit Test trong giai đoạn hiện tại.
-- Không thêm test runner hoặc dependency test mới chỉ để chuẩn bị trước.
-- Các luồng POS quan trọng được kiểm tra bằng manual UAT sau mỗi lát cắt refactor.
-- Component test/browser E2E chỉ xem xét lại ở một milestone riêng khi có nhu cầu vận hành và dependency được duyệt.
+- Không yêu cầu phủ Unit Test toàn bộ frontend hoặc viết test chỉ để tăng coverage cho phần refactor đã hoàn thành.
+- Ngoại lệ đã chốt: Phase 0B được phép thêm Vitest + React Testing Library với jsdom làm harness tối thiểu cho regression P0 như shortcut/overlay scope, undo theo cart, offline reprice, checkout validation và Sync Center state/action.
+- Ticket setup harness là việc đầu tiên của Phase 0B: thêm đúng dependency/script/lockfile cần thiết và một smoke test chạy được. Tài liệu này không tự cài dependency; thay đổi package chỉ thực hiện trong ticket implementation có review.
+- Không dùng snapshot-only test làm bằng chứng cho correctness nghiệp vụ hoặc accessibility. Test phải thao tác như người dùng và assert state/action quan sát được.
+- Browser UAT lặp lại vẫn bắt buộc cho focus thực, scanner keyboard, IndexedDB/service worker, mất/kết nối lại mạng và print 58 mm; jsdom không thay thế được các gate này.
 
-### Guardrail hiện tại
+Quyết định này thay thế câu “không thêm test runner” của bản plan trước. [`2026-08-21-204944-DANH-GIA-SOURCE-UX-VA-ROADMAP-MINIMART.md`](2026-08-21-204944-DANH-GIA-SOURCE-UX-VA-ROADMAP-MINIMART.md) quyết định phạm vi regression P0; tài liệu hiện tại là source of truth về dependency và quality gate frontend.
+
+### Guardrail sau khi harness Phase 0B được thêm
 
 ```text
 format:check
   → lint:check
   → typecheck
+  → test:frontend
   → vite build
-  → manual UAT cho luồng POS/P0
+  → browser UAT cho luồng POS/P0 và thiết bị thật
 ```
+
+Trước ticket setup Phase 0B, `package.json` chưa có frontend test runner hoặc script `test:frontend`; guardrail hiện hành vẫn chạy các bước đã tồn tại và browser/manual UAT.
 
 ## 12. Thứ tự ticket đề xuất
 
@@ -601,7 +609,7 @@ format:check
 | 1 | Đã triển khai code, chờ UAT production | Retirement worker, cleanup bootstrap và quy tắc không cache HTML đã áp dụng; cần xác nhận trên Hostinger. |
 | 2 | Đã hoàn tất | Đã có `format:check`, `lint:check`, `typecheck`, `check` và import-boundary rules trong `eslint.config.js`; guardrail hiện pass. |
 | 3 | Đã triển khai | Formatter, HTTP/CSRF client và `HttpError` dùng chung đã tạo. |
-| 4 | Đã triển khai | POS types/selectors và checkout validation đã chuyển vào `features/pos/model`; không viết Unit Test trong milestone hiện tại. |
+| 4 | Đã triển khai | POS types/selectors và checkout validation đã chuyển vào `features/pos/model`; regression P0 liên quan sẽ được bổ sung sau khi harness Phase 0B được thiết lập. |
 | 5–7 | Đã hoàn tất code, chờ UAT | POS đã có `PosStatusBar`, `CatalogPanel`, `CartTable`, `CartSummary`, `OpenShiftDialog`, `ReceiptPreview` và `SaleSuccessBar`; còn manual UAT interaction. |
 | 8 | Đã hoàn tất code, chờ UAT | `usePosCart`, `usePosCheckout`, `usePosShortcuts` và `useConnectivity` đã tách; còn manual UAT keyboard/offline. |
 | 9 | Đã hoàn tất code, chờ UAT | POS API, IndexedDB sale repository, catalog cache repository và sync orchestration đã tách trong `features/pos/api`; cần kiểm tra luồng online/offline thực tế. |

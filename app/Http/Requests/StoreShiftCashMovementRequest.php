@@ -9,7 +9,7 @@ class StoreShiftCashMovementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('shift.cash_movement') === true;
     }
 
     public function rules(): array

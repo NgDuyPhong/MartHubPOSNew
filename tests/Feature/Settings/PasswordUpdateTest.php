@@ -4,7 +4,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 test('password can be updated', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['remember_token' => 'old-remember-token']);
 
     $response = $this
         ->actingAs($user)
@@ -17,9 +17,13 @@ test('password can be updated', function () {
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect('/settings/password');
+        ->assertRedirect(route('login'));
 
-    expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
+    $user->refresh();
+
+    expect(Hash::check('new-password', $user->password))->toBeTrue()
+        ->and($user->remember_token)->not->toBe('old-remember-token')
+        ->and($user->remember_token)->toHaveLength(60);
 });
 
 test('correct password must be provided to update password', function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\SessionRevocationService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class NewPasswordController extends Controller
 {
+    public function __construct(private readonly SessionRevocationService $sessionRevocation) {}
+
     /**
      * Show the password reset page.
      */
@@ -50,6 +53,7 @@ class NewPasswordController extends Controller
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
+                $this->sessionRevocation->revokeFor($user);
 
                 event(new PasswordReset($user));
             }

@@ -17,8 +17,19 @@ class OpenShiftAction
     public function execute(User $user, array $data): Shift
     {
         return DB::transaction(function () use ($user, $data) {
-            $register = Register::query()->whereKey($data['register_id'])->where('branch_id', $user->branch_id)->firstOrFail();
-            if (Shift::query()->where('register_id', $register->id)->where('status', 'open')->lockForUpdate()->exists()) {
+            $activeRegisterCount = Register::query()->where('branch_id', $user->branch_id)->where('is_active', true)->count();
+            if ($activeRegisterCount !== 1) {
+                throw ValidationException::withMessages(['register_id' => 'Chi nhánh phải có đúng một quầy hoạt động trước khi mở ca.']);
+            }
+
+            $register = Register::query()
+                ->whereKey($data['register_id'])
+                ->where('branch_id', $user->branch_id)
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (Shift::query()->where('register_id', $register->id)->where('status', 'open')->exists()) {
                 throw ValidationException::withMessages(['register_id' => 'Quầy này đang có một ca mở.']);
             }
 

@@ -9,8 +9,7 @@ class LegacyImportRequest extends FormRequest
     public function authorize(): bool
     {
         return config('legacy-product-import.enabled', true)
-            && $this->user()?->is_active === true
-            && in_array($this->user()?->role, ['owner', 'manager'], true);
+            && $this->user()?->hasCapability('import.legacy') === true;
     }
 
     public function rules(): array

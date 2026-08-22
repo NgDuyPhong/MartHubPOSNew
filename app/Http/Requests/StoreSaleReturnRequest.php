@@ -9,7 +9,7 @@ class StoreSaleReturnRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->is_active === true;
+        return $this->user()?->hasCapability('sales.return') === true;
     }
 
     public function rules(): array

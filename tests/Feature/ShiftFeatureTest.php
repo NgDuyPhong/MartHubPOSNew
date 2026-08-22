@@ -53,3 +53,17 @@ test('pos active shift exposes register, opener and opened time', function () {
         ->where('activeShift.opened_by.name', $fixture['user']->name)
         ->has('activeShift.opened_at'));
 });
+
+test('pos fails closed when a branch has multiple active registers', function () {
+    $fixture = shiftFixture();
+    Register::query()->create(['branch_id' => $fixture['branch']->id, 'code' => 'POS-2', 'name' => 'Quầy 2', 'is_active' => true]);
+
+    $this->actingAs($fixture['user'])->get(route('pos'))->assertInertia(fn ($page) => $page
+        ->where('activeShift', null)
+        ->where('registers', []));
+
+    $this->actingAs($fixture['user'])->post(route('shifts.store'), [
+        'register_id' => $fixture['register']->id,
+        'opening_cash' => 0,
+    ])->assertSessionHasErrors('register_id');
+});

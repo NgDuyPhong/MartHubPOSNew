@@ -9,7 +9,7 @@ class StoreStockReceiptRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array($this->user()?->role, ['owner', 'manager'], true);
+        return $this->user()?->hasCapability('inventory.receive') === true;
     }
 
     public function rules(): array

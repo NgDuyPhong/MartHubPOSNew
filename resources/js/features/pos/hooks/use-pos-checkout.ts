@@ -38,6 +38,7 @@ function buildOfflineReceipt(payload: SalePayload, cart: CartLine[], totals: Ret
 }
 
 type CheckoutOptions = {
+    actorId: number;
     cart: CartLine[];
     catalog: Product[];
     scopeKey: string;
@@ -102,6 +103,7 @@ export function usePosCheckout(options: CheckoutOptions) {
         const makePayload = (shift: Shift): SalePayload => ({
             idempotency_key: crypto.randomUUID(),
             shift_id: shift.id,
+            original_actor_id: options.actorId,
             customer_id: customerId,
             source: options.online ? 'online' : 'offline_sync',
             items: options.cart.map((line) => ({
