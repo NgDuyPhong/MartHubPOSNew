@@ -4,6 +4,7 @@ export { CatalogPanel } from './catalog-panel';
 export { HeldCartsPanel } from './held-carts-panel';
 export { OpenShiftDialog } from './open-shift-dialog';
 export { PosMoneyInput } from './pos-money-input';
+export { PosNotices } from './pos-notices';
 export { PosStatusBar } from './pos-status-bar';
 export { QuickCustomerDialog } from './quick-customer-dialog';
 export { ReceiptPreview, SaleSuccessBar } from './receipt-preview';

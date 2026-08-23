@@ -1,4 +1,4 @@
-import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FilterBar, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
 import { CustomerFormDialog, CustomerTable, DebtPaymentDialog, type Customer, type CustomerWithBalance } from '@/features/customers';
@@ -66,7 +66,7 @@ export default function CustomersPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Khách hàng & công nợ', href: route('customers.index') }]}>
             <Head title="Khách hàng & công nợ" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Khách hàng & công nợ"
                     description="Số điện thoại không bắt buộc; khách ghi nợ được nhận diện bằng mã nội bộ."
@@ -79,12 +79,22 @@ export default function CustomersPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm mã, tên hoặc số điện thoại…" />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
+                    <NativeSelect
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc trạng thái"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Tất cả trạng thái</option>
                         <option value="active">Đang hoạt động</option>
                         <option value="inactive">Ngừng hoạt động</option>
                     </NativeSelect>
-                    <NativeSelect value={query.debt} onChange={(event) => update('debt', event.target.value)} aria-label="Lọc công nợ">
+                    <NativeSelect
+                        value={query.debt}
+                        onChange={(event) => update('debt', event.target.value)}
+                        aria-label="Lọc công nợ"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Tất cả công nợ</option>
                         <option value="with_debt">Đang có nợ</option>
                         <option value="without_debt">Không có nợ</option>
@@ -116,7 +126,7 @@ export default function CustomersPage({
                     />
                     <Pagination paginator={customers} routeUrl={route('customers.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
             <CustomerFormDialog
                 open={open}
                 onOpenChange={(value) => {

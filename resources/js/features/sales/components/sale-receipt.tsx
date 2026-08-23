@@ -56,7 +56,7 @@ export function SaleReceipt({
                     </tbody>
                 </table>
             </div>
-            <div className="ml-auto w-full max-w-sm space-y-2 border-t p-4 text-sm">
+            <div className="ml-auto flex w-full max-w-sm flex-col gap-2 border-t p-4 text-sm">
                 <div className="flex justify-between">
                     <span>Tạm tính</span>
                     <span>{formatMoney(sale.subtotal)}đ</span>

@@ -1,3 +1,4 @@
+import { PageShell } from '@/components/shared';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +40,7 @@ export default function LegacyImportsPage() {
     return (
         <AppLayout breadcrumbs={[{ title: 'Import sản phẩm cũ', href: route('legacy-imports.index') }]}>
             <Head title="Import sản phẩm cũ" />
-            <div className="space-y-6 p-4">
+            <PageShell className="gap-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <div className="text-primary mb-2 flex items-center gap-2 text-sm font-medium">
@@ -147,17 +148,23 @@ export default function LegacyImportsPage() {
                                 </Alert>
                             )}
                             <div className="overflow-x-auto rounded-md border">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-muted/50 text-muted-foreground">
+                                <table className="w-full min-w-[520px] text-left text-sm" aria-label="Kết quả kiểm tra bundle">
+                                    <thead className="bg-muted/50 text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                         <tr>
-                                            <th className="px-3 py-2">Entity</th>
-                                            <th className="px-3 py-2">Rows</th>
-                                            <th className="px-3 py-2">Errors</th>
+                                            <th scope="col" className="px-3 py-2">
+                                                Entity
+                                            </th>
+                                            <th scope="col" className="px-3 py-2">
+                                                Rows
+                                            </th>
+                                            <th scope="col" className="px-3 py-2">
+                                                Errors
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {Object.entries(preview.profile).map(([entity, result]) => (
-                                            <tr className="border-t" key={entity}>
+                                            <tr className="hover:bg-muted/50 border-t transition-colors" key={entity}>
                                                 <td className="px-3 py-2 font-medium">{entity}</td>
                                                 <td className="px-3 py-2">{result.rows}</td>
                                                 <td className="px-3 py-2">{result.errors}</td>
@@ -185,7 +192,7 @@ export default function LegacyImportsPage() {
                         </CardDescription>
                     </CardHeader>
                 </Card>
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

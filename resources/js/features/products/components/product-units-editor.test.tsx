@@ -45,7 +45,7 @@ describe('ProductUnitsEditor default sale unit', () => {
 
         const barcodeInputs = screen.getAllByLabelText('Barcode') as HTMLInputElement[];
         expect(barcodeInputs.map((input) => input.value)).toEqual(['BOX-012', 'BASE-001']);
-        expect(barcodeInputs[0].closest('.space-y-3')).toHaveClass('border-primary/50', 'bg-primary/5');
+        expect(barcodeInputs[0].closest('.product-unit-row')).toHaveClass('border-primary/50', 'bg-primary/5');
 
         fireEvent.change(barcodeInputs[0], { target: { value: 'BOX-013' } });
         expect(updateUnit).toHaveBeenCalledWith(1, { barcode: 'BOX-013' });

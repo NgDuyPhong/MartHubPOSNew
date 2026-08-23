@@ -1,3 +1,4 @@
+import { PageShell } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { ReturnDialog, SaleReceipt, nonEmptyReturnItems, type ReturnFormData, type SaleItem } from '@/features/sales';
 import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
@@ -48,7 +49,7 @@ export default function SaleShow({ sale, activeShift }: { sale: Sale; activeShif
             ]}
         >
             <Head title={sale.invoice_number} />
-            <div className="space-y-4 p-4">
+            <PageShell>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                         <Link href={route('sales.index')}>
@@ -75,7 +76,7 @@ export default function SaleShow({ sale, activeShift }: { sale: Sale; activeShif
                     </div>
                 </div>
                 <SaleReceipt sale={sale} />
-            </div>
+            </PageShell>
             <ReturnDialog
                 open={returnOpen}
                 onOpenChange={setReturnOpen}

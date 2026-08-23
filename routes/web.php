@@ -12,9 +12,13 @@ use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockReceiptController;
 use App\Http\Controllers\UnitController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
-Route::get('/', fn () => redirect()->route('dashboard'))->name('home');
+Route::get('/', function (Request $request) {
+    return $request->user() ? redirect()->route('dashboard') : Inertia::render('welcome');
+})->name('home');
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('dashboard', RetailDashboardController::class)->middleware('capability:report.view')->name('dashboard');

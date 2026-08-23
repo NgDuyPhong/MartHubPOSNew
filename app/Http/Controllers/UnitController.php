@@ -21,7 +21,7 @@ class UnitController extends Controller
         $organizationId = $request->user()->organization_id;
         $search = trim((string) $request->string('search'));
         $normalizedSearch = VietnameseSearch::normalize($search);
-        $status = $request->string('status')->toString() ?: 'all';
+        $status = $request->string('status')->toString() ?: 'active';
         $perPage = in_array($request->integer('per_page'), config('ux.pagination.options'), true) ? $request->integer('per_page') : config('ux.pagination.default');
 
         $units = Unit::query()

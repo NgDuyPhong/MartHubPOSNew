@@ -21,7 +21,7 @@ export function PosStatusBar({
     onOpenLatestReceipt: () => void;
 }) {
     return (
-        <div className="bg-card mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 shadow-sm" aria-live="polite">
+        <div className="bg-card mb-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 shadow-sm" aria-live="polite">
             <div className="flex items-center gap-2 text-sm">
                 <Badge className={online ? 'bg-success text-success-foreground' : 'bg-warning text-warning-foreground'}>
                     {online ? <Wifi className="mr-1 size-3" /> : <WifiOff className="mr-1 size-3" />}
@@ -40,10 +40,10 @@ export function PosStatusBar({
                     )}
                 </div>
             </div>
-            <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <div className="text-muted-foreground flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 text-right text-xs leading-5">
                 {hasLatestReceipt && (
                     <Button size="sm" variant="outline" onClick={onOpenLatestReceipt} aria-label="Mở và in lại hóa đơn gần nhất">
-                        <FileText className="mr-1 size-3.5" />
+                        <FileText className="size-3.5" />
                         Hóa đơn gần nhất
                     </Button>
                 )}
@@ -52,10 +52,10 @@ export function PosStatusBar({
                         Xem đồng bộ ({pendingCount})
                     </Button>
                 )}
-                F3 tìm · F8 xóa giỏ · F9 tiền đủ · F12 thanh toán
+                <span className="max-w-full">F3 tìm · F8 xóa giỏ · F9 tiền đủ · F12 thanh toán</span>
                 {expiryAlerts > 0 && (
                     <Badge className="bg-warning-muted text-warning-foreground">
-                        <AlertTriangle className="mr-1 size-3" />
+                        <AlertTriangle className="size-3" />
                         {expiryAlerts} lô cận/hết hạn
                     </Badge>
                 )}

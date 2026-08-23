@@ -55,7 +55,7 @@ export function ProductUnitsEditor({
                     Thêm đơn vị
                 </Button>
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
                 {form.data.units
                     .map((row, index) => ({ row, index }))
                     .sort(({ row: first }, { row: second }) => Number(second.is_default_sale) - Number(first.is_default_sale))
@@ -66,7 +66,7 @@ export function ProductUnitsEditor({
                             <div
                                 key={row.id ?? index}
                                 className={cn(
-                                    'space-y-3 rounded-md border p-3',
+                                    'product-unit-row flex flex-col gap-3 rounded-md border p-3',
                                     row.is_default_sale ? 'border-primary/50 bg-primary/5 shadow-sm' : 'bg-muted/30',
                                 )}
                             >

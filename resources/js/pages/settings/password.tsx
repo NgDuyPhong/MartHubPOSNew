@@ -53,13 +53,13 @@ export default function Password() {
             <Head title="Cài đặt mật khẩu" />
 
             <SettingsLayout>
-                <div className="space-y-6">
+                <div className="flex flex-col gap-6">
                     <HeadingSmall
                         title="Cập nhật mật khẩu"
                         description="Đảm bảo tài khoản sử dụng mật khẩu dài và ngẫu nhiên để tăng cường bảo mật"
                     />
 
-                    <form onSubmit={updatePassword} className="space-y-6">
+                    <form onSubmit={updatePassword} className="flex flex-col gap-6">
                         <div className="grid gap-2">
                             <Label htmlFor="current_password">Mật khẩu hiện tại</Label>
 
@@ -69,7 +69,7 @@ export default function Password() {
                                 value={data.current_password}
                                 onChange={(e) => setData('current_password', e.target.value)}
                                 type="password"
-                                className="mt-1 block w-full"
+                                className="w-full"
                                 autoComplete="current-password"
                                 placeholder="Mật khẩu hiện tại"
                             />
@@ -86,7 +86,7 @@ export default function Password() {
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 type="password"
-                                className="mt-1 block w-full"
+                                className="w-full"
                                 autoComplete="new-password"
                                 placeholder="Mật khẩu mới"
                             />
@@ -102,7 +102,7 @@ export default function Password() {
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
                                 type="password"
-                                className="mt-1 block w-full"
+                                className="w-full"
                                 autoComplete="new-password"
                                 placeholder="Xác nhận mật khẩu"
                             />
@@ -120,7 +120,7 @@ export default function Password() {
                                 leave="transition ease-in-out"
                                 leaveTo="opacity-0"
                             >
-                                <p className="text-sm text-neutral-600">Đã lưu</p>
+                                <p className="text-muted-foreground text-sm">Đã lưu</p>
                             </Transition>
                         </div>
                     </form>

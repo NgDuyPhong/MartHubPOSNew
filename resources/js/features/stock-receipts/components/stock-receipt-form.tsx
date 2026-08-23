@@ -22,7 +22,7 @@ export function StockReceiptForm({
     onSubmit: (event: FormEvent) => void;
 }) {
     return (
-        <form className="bg-card space-y-4 rounded-lg border p-4 shadow-sm" onSubmit={onSubmit}>
+        <form className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-sm" onSubmit={onSubmit}>
             <div className="grid gap-3 md:grid-cols-2">
                 <div>
                     <Label htmlFor="stock-supplier">Nguồn hàng / ghi chú nhà cung cấp</Label>

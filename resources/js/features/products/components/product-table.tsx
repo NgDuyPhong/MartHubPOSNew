@@ -43,16 +43,30 @@ export function ProductTable({
 }) {
     return (
         <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-                <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+            <table className="w-full min-w-max text-sm" aria-label="Danh sách sản phẩm">
+                <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                     <tr>
-                        <th className="px-4 py-3">Sản phẩm</th>
-                        <th className="px-4 py-3">Danh mục</th>
-                        <th className="px-4 py-3">Quy cách bán</th>
-                        <th className="px-4 py-3 text-right">Tồn đơn vị gốc</th>
-                        <th className="px-4 py-3 text-right">Giá vốn cuối</th>
-                        <th className="px-4 py-3">Trạng thái</th>
-                        <th></th>
+                        <th scope="col" className="px-4 py-3">
+                            Sản phẩm
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Danh mục
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Quy cách bán
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right">
+                            Tồn đơn vị gốc
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right">
+                            Giá vốn cuối
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Trạng thái
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right">
+                            <span className="sr-only">Thao tác</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,7 +74,7 @@ export function ProductTable({
                         const variant = product.variants[0];
                         const defaultUnit = product.is_active ? variant?.units.find((item) => item.is_default_sale) : undefined;
                         return (
-                            <tr key={product.id} className="hover:bg-muted/50 border-t align-top">
+                            <tr key={product.id} className="hover:bg-muted/50 border-t align-top transition-colors">
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         <ProductThumbnail product={product} />

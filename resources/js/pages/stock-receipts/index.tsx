@@ -1,4 +1,4 @@
-import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FilterBar, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,7 +80,7 @@ export default function StockReceiptsPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Nhập kho', href: route('stock-receipts.index') }]}>
             <Head title="Nhập kho" />
-            <div className="space-y-4 p-4">
+            <PageShell>
                 <PageHeader
                     title="Bổ sung tồn kho"
                     description="Nhập tay hoặc import Excel; giá vốn cập nhật theo lần nhập cuối."
@@ -138,7 +138,7 @@ export default function StockReceiptsPage({
                 <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
                     <Pagination paginator={receipts} routeUrl={route('stock-receipts.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

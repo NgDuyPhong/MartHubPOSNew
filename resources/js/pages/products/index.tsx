@@ -1,4 +1,4 @@
-import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FilterBar, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -46,7 +46,7 @@ export default function ProductsPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Sản phẩm', href: route('products.index') }]}>
             <Head title="Sản phẩm" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Sản phẩm & đơn vị bán"
                     description="Tồn kho lưu theo đơn vị cơ sở; barcode gắn với từng quy cách."
@@ -61,40 +61,48 @@ export default function ProductsPage({
                         ) : undefined
                     }
                 />
-                <FilterBar>
-                    <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên, SKU hoặc barcode…" />
-                    <SearchableSelect
-                        value={query.category_id === null ? null : String(query.category_id)}
-                        options={categories.map((category) => ({ value: String(category.id), label: category.name, searchText: category.name }))}
-                        onValueChange={(value) => update('category_id', value ? Number(value) : null)}
-                        placeholder="Tất cả danh mục"
-                        searchPlaceholder="Tìm danh mục…"
-                        emptyText="Không tìm thấy danh mục."
-                        aria-label="Lọc theo danh mục"
-                        clearable
-                        className="md:min-w-56"
-                    />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="active">Đang bán</option>
-                        <option value="inactive">Ngừng bán</option>
-                    </NativeSelect>
-                    <NativeSelect
-                        value={query.sort}
-                        onChange={(event) => {
-                            update('sort', event.target.value);
-                            update('direction', event.target.value === 'latest' ? 'desc' : 'asc');
-                        }}
-                        aria-label="Sắp xếp sản phẩm"
-                    >
-                        <option value="latest">Mới tạo</option>
-                        <option value="name">Tên A-Z</option>
-                        <option value="sku">SKU</option>
-                    </NativeSelect>
-                    <NativeSelect value={query.direction} onChange={(event) => update('direction', event.target.value)} aria-label="Chiều sắp xếp">
-                        <option value="asc">Tăng dần</option>
-                        <option value="desc">Giảm dần</option>
-                    </NativeSelect>
+                <FilterBar className="md:flex-col md:items-stretch">
+                    <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(20rem,22rem)]">
+                        <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên, SKU hoặc barcode…" />
+                        <SearchableSelect
+                            value={query.category_id === null ? null : String(query.category_id)}
+                            options={categories.map((category) => ({ value: String(category.id), label: category.name, searchText: category.name }))}
+                            onValueChange={(value) => update('category_id', value ? Number(value) : null)}
+                            placeholder="Tất cả danh mục"
+                            searchPlaceholder="Tìm danh mục…"
+                            emptyText="Không tìm thấy danh mục."
+                            aria-label="Lọc theo danh mục"
+                            clearable
+                            className="min-w-0"
+                        />
+                    </div>
+                    <div className="grid min-w-0 gap-3 sm:grid-cols-3 md:max-w-3xl">
+                        <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="active">Đang bán</option>
+                            <option value="inactive">Ngừng bán</option>
+                        </NativeSelect>
+                        <NativeSelect
+                            value={query.sort}
+                            onChange={(event) => {
+                                update('sort', event.target.value);
+                                update('direction', event.target.value === 'latest' ? 'desc' : 'asc');
+                            }}
+                            aria-label="Sắp xếp sản phẩm"
+                        >
+                            <option value="latest">Mới tạo</option>
+                            <option value="name">Tên A-Z</option>
+                            <option value="sku">SKU</option>
+                        </NativeSelect>
+                        <NativeSelect
+                            value={query.direction}
+                            onChange={(event) => update('direction', event.target.value)}
+                            aria-label="Chiều sắp xếp"
+                        >
+                            <option value="asc">Tăng dần</option>
+                            <option value="desc">Giảm dần</option>
+                        </NativeSelect>
+                    </div>
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border">
                     <ProductTable
@@ -138,7 +146,7 @@ export default function ProductsPage({
                         }
                     }}
                 />
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

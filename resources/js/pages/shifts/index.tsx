@@ -1,4 +1,4 @@
-import { CollectionState, DateRangeFilter, FilterBar, getDateRangeError, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, DateRangeFilter, FilterBar, getDateRangeError, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
@@ -83,7 +83,7 @@ export default function ShiftsPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Ca / két', href: route('shifts.index') }]}>
             <Head title="Ca / két" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Quản lý ca & két"
                     description="Ca dùng chung cho quầy; mọi thao tác vẫn ghi nhận nhân viên thực hiện."
@@ -96,7 +96,12 @@ export default function ShiftsPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm mã ca hoặc quầy…" />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái ca">
+                    <NativeSelect
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc trạng thái ca"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Tất cả ca</option>
                         <option value="open">Đang mở</option>
                         <option value="closed">Đã đóng</option>
@@ -124,7 +129,7 @@ export default function ShiftsPage({
                     />
                     <Pagination paginator={shifts} routeUrl={route('shifts.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
             <OpenShiftDialog open={openModal} onOpenChange={setOpenModal} form={openForm} registers={registers} onSubmit={submitOpen} />
             <CashMovementDialog
                 open={Boolean(cashShift)}

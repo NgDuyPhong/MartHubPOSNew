@@ -17,22 +17,34 @@ export function CustomerTable({
 }) {
     return (
         <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+            <table className="w-full min-w-[720px] text-sm" aria-label="Danh sách khách hàng">
+                <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                     <tr>
-                        <th className="px-4 py-3">Mã</th>
-                        <th className="px-4 py-3">Khách hàng</th>
-                        <th className="px-4 py-3">Điện thoại</th>
-                        <th className="px-4 py-3">Địa chỉ</th>
-                        <th className="px-4 py-3 text-right">Còn nợ</th>
-                        <th></th>
+                        <th scope="col" className="px-4 py-3">
+                            Mã
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Khách hàng
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Điện thoại
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Địa chỉ
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right">
+                            Còn nợ
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right">
+                            <span className="sr-only">Thao tác</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     {customers.map((customer) => {
                         const balance = customerBalance(customer);
                         return (
-                            <tr key={customer.id} className="border-t">
+                            <tr key={customer.id} className="hover:bg-muted/50 border-t transition-colors">
                                 <td className="text-muted-foreground px-4 py-3">{customer.code}</td>
                                 <td className="px-4 font-semibold">{customer.name}</td>
                                 <td className="px-4">{customer.phone || '—'}</td>

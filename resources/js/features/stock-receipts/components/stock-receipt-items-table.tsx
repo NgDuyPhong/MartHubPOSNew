@@ -75,6 +75,7 @@ export function StockReceiptItemsTable({
                                     <Input
                                         type="date"
                                         value={row.expiry_date}
+                                        aria-label={`Hạn sử dụng, dòng ${index + 1}`}
                                         onChange={(event) => updateRow(index, { expiry_date: event.target.value })}
                                     />
                                 </td>

@@ -20,7 +20,7 @@ export default function Appearance() {
             <Head title="Cài đặt giao diện" />
 
             <SettingsLayout>
-                <div className="space-y-6">
+                <div className="flex flex-col gap-6">
                     <HeadingSmall title="Cài đặt giao diện" description="Cập nhật giao diện cho tài khoản của bạn" />
                     <AppearanceTabs />
                 </div>

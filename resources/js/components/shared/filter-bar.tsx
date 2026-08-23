@@ -1,5 +1,14 @@
-import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-export function FilterBar({ children }: { children: ReactNode }) {
-    return <div className="bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-sm md:flex-row md:flex-wrap md:items-center">{children}</div>;
+interface FilterBarProps extends Omit<ComponentPropsWithoutRef<'div'>, 'children'> {
+    children: ReactNode;
+}
+
+export function FilterBar({ children, className, ...props }: FilterBarProps) {
+    return (
+        <div className={cn('bg-card flex min-w-0 flex-col gap-3 rounded-lg border p-3 md:flex-row md:flex-wrap md:items-end', className)} {...props}>
+            {children}
+        </div>
+    );
 }

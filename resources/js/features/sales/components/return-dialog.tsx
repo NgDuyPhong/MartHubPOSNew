@@ -47,7 +47,7 @@ export function ReturnDialog({
                     <DialogTitle>Đổi / trả từ {invoiceNumber}</DialogTitle>
                     <DialogDescription>Chỉ nhập số lượng cần trả. Hàng còn bán được sẽ cộng lại tồn kho.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
+                <form onSubmit={onSubmit} className="flex flex-col gap-4">
                     <ReturnItemsTable saleItems={saleItems} form={form} />
                     <div className="grid gap-3 md:grid-cols-3">
                         <div>

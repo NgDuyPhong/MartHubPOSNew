@@ -1,4 +1,4 @@
-import { CollectionState, FieldError, FilterBar, FormErrorSummary, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FieldError, FilterBar, FormErrorSummary, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -158,7 +158,7 @@ export default function CategoriesPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Danh mục', href: route('categories.index') }]}>
             <Head title="Danh mục" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Danh mục sản phẩm"
                     description="Quản lý cây danh mục, trạng thái và số sản phẩm đang sử dụng."
@@ -173,11 +173,6 @@ export default function CategoriesPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên hoặc mã danh mục…" />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="active">Đang dùng</option>
-                        <option value="inactive">Ngừng dùng</option>
-                    </NativeSelect>
                     <SearchableSelect
                         value={query.parent_id === null ? null : String(query.parent_id)}
                         options={parentCategoryOptions}
@@ -187,25 +182,47 @@ export default function CategoriesPage({
                         emptyText="Không tìm thấy danh mục cha."
                         aria-label="Lọc danh mục cha"
                         clearable
-                        className="md:min-w-56"
+                        className="md:w-70 md:shrink-0"
                     />
+                    <NativeSelect
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc trạng thái"
+                        className="md:w-44 md:shrink-0"
+                    >
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang dùng</option>
+                        <option value="inactive">Ngừng dùng</option>
+                    </NativeSelect>
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+                        <table className="w-full min-w-[760px] text-sm" aria-label="Danh sách danh mục">
+                            <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                                 <tr>
-                                    <th className="px-4 py-3">Danh mục</th>
-                                    <th className="px-4 py-3">Mã</th>
-                                    <th className="px-4 py-3">Danh mục cha</th>
-                                    <th className="px-4 py-3 text-right">Sản phẩm</th>
-                                    <th className="px-4 py-3">Trạng thái</th>
-                                    <th className="px-4 py-3 text-right">Thao tác</th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Danh mục
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Mã
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Danh mục cha
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Sản phẩm
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Trạng thái
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Thao tác
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {categories.data.map((category) => (
-                                    <tr key={category.id} className="hover:bg-muted/50 border-t">
+                                    <tr key={category.id} className="hover:bg-muted/50 border-t transition-colors">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2 font-medium">
                                                 <FolderTree className="text-muted-foreground size-4" />
@@ -254,7 +271,7 @@ export default function CategoriesPage({
                     />
                     <Pagination paginator={categories} routeUrl={route('categories.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
                     <DialogHeader>

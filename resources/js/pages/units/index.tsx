@@ -1,4 +1,4 @@
-import { CollectionState, FieldError, FilterBar, FormErrorSummary, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FieldError, FilterBar, FormErrorSummary, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,7 +26,11 @@ export default function UnitsPage({
     filters: Omit<Filters, 'page'>;
     canManageCatalog: boolean;
 }) {
-    const { query, update, reset, isLoading, error, retry } = useListQuery<Filters>(route('units.index'), { ...filters, page: 1 });
+    const { query, update, reset, isLoading, error, retry } = useListQuery<Filters>(route('units.index'), {
+        ...filters,
+        status: filters.status || 'active',
+        page: 1,
+    });
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState<Unit | null>(null);
     const form = useForm<FormData>({ code: '', name: '', is_active: true });
@@ -58,7 +62,7 @@ export default function UnitsPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Đơn vị', href: route('units.index') }]}>
             <Head title="Đơn vị" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Đơn vị tính"
                     description="Đơn vị dùng chung; hệ số quy đổi nằm ở từng sản phẩm."
@@ -73,7 +77,12 @@ export default function UnitsPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên hoặc mã đơn vị…" />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
+                    <NativeSelect
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc trạng thái"
+                        className="md:w-70 md:shrink-0"
+                    >
                         <option value="all">Tất cả trạng thái</option>
                         <option value="active">Đang dùng</option>
                         <option value="inactive">Ngừng dùng</option>
@@ -81,19 +90,29 @@ export default function UnitsPage({
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+                        <table className="w-full min-w-[640px] text-sm" aria-label="Danh sách đơn vị tính">
+                            <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                                 <tr>
-                                    <th className="px-4 py-3">Mã</th>
-                                    <th className="px-4 py-3">Tên</th>
-                                    <th className="px-4 py-3 text-right">Sản phẩm sử dụng</th>
-                                    <th className="px-4 py-3">Trạng thái</th>
-                                    <th className="px-4 py-3 text-right">Thao tác</th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Mã
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Tên
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Sản phẩm sử dụng
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Trạng thái
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Thao tác
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {units.data.map((unit) => (
-                                    <tr key={unit.id} className="hover:bg-muted/50 border-t">
+                                    <tr key={unit.id} className="hover:bg-muted/50 border-t transition-colors">
                                         <td className="px-4 py-3 font-mono text-xs">{unit.code}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2 font-medium">
@@ -129,7 +148,7 @@ export default function UnitsPage({
                     />
                     <Pagination paginator={units} routeUrl={route('units.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
                     <DialogHeader>

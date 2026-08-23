@@ -1,3 +1,4 @@
+import { PageHeader, PageShell } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
@@ -24,19 +25,19 @@ export default function Dashboard({
     return (
         <AppLayout breadcrumbs={[{ title: 'Tổng quan', href: '/dashboard' }]}>
             <Head title="Tổng quan" />
-            <div className="space-y-4 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold">Tổng quan cửa hàng</h1>
-                        <p className="text-muted-foreground text-sm">Số liệu vận hành trong ngày</p>
-                    </div>
-                    <Button asChild>
-                        <Link href="/pos">
-                            <ShoppingCart />
-                            Mở màn hình bán hàng
-                        </Link>
-                    </Button>
-                </div>
+            <PageShell>
+                <PageHeader
+                    title="Tổng quan cửa hàng"
+                    description="Số liệu vận hành trong ngày"
+                    actions={
+                        <Button asChild>
+                            <Link href="/pos">
+                                <ShoppingCart />
+                                Mở màn hình bán hàng
+                            </Link>
+                        </Button>
+                    }
+                />
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {cards.map((card) => (
                         <div key={card.label} className="bg-card rounded-lg border p-4 shadow-sm">
@@ -56,30 +57,40 @@ export default function Dashboard({
                                 Xem tất cả
                             </Link>
                         </div>
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
-                                <tr>
-                                    <th className="px-4 py-2">Số hóa đơn</th>
-                                    <th className="px-4 py-2">Khách hàng</th>
-                                    <th className="px-4 py-2">Thời gian</th>
-                                    <th className="px-4 py-2 text-right">Tổng</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentSales.map((sale) => (
-                                    <tr key={sale.id} className="border-t">
-                                        <td className="px-4 py-3">
-                                            <Link href={`/sales/${sale.id}`} className="text-primary font-medium">
-                                                {sale.invoice_number}
-                                            </Link>
-                                        </td>
-                                        <td className="px-4">{sale.customer?.name ?? 'Khách lẻ'}</td>
-                                        <td className="text-muted-foreground px-4">{formatDateTime(sale.sold_at, timezone)}</td>
-                                        <td className="px-4 text-right font-semibold">{formatMoney(sale.total)}đ</td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[640px] text-sm" aria-label="Hóa đơn gần đây">
+                                <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
+                                    <tr>
+                                        <th scope="col" className="px-4 py-2">
+                                            Số hóa đơn
+                                        </th>
+                                        <th scope="col" className="px-4 py-2">
+                                            Khách hàng
+                                        </th>
+                                        <th scope="col" className="px-4 py-2">
+                                            Thời gian
+                                        </th>
+                                        <th scope="col" className="px-4 py-2 text-right">
+                                            Tổng
+                                        </th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {recentSales.map((sale) => (
+                                        <tr key={sale.id} className="hover:bg-muted/50 border-t transition-colors">
+                                            <td className="px-4 py-3">
+                                                <Link href={`/sales/${sale.id}`} className="text-primary font-medium">
+                                                    {sale.invoice_number}
+                                                </Link>
+                                            </td>
+                                            <td className="px-4">{sale.customer?.name ?? 'Khách lẻ'}</td>
+                                            <td className="text-muted-foreground px-4">{formatDateTime(sale.sold_at, timezone)}</td>
+                                            <td className="px-4 text-right font-semibold">{formatMoney(sale.total)}đ</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div className="space-y-3">
                         <Link
@@ -110,7 +121,7 @@ export default function Dashboard({
                         </Link>
                     </div>
                 </div>
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

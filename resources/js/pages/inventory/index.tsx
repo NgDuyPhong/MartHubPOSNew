@@ -1,4 +1,4 @@
-import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FilterBar, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -25,7 +25,7 @@ export default function InventoryPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Tồn kho', href: '/inventory' }]}>
             <Head title="Tồn kho" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Tồn kho & hạn sử dụng"
                     description="Số lượng hiển thị theo đơn vị cơ sở; tồn âm vẫn được phép bán và cần đối soát."
@@ -62,7 +62,12 @@ export default function InventoryPage({
                 )}
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm SKU hoặc tên sản phẩm…" />
-                    <NativeSelect value={query.stock} onChange={(event) => update('stock', event.target.value)} aria-label="Lọc trạng thái tồn">
+                    <NativeSelect
+                        value={query.stock}
+                        onChange={(event) => update('stock', event.target.value)}
+                        aria-label="Lọc trạng thái tồn"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Tất cả tồn</option>
                         <option value="negative">Tồn âm</option>
                         <option value="empty">Hết tồn</option>
@@ -71,20 +76,28 @@ export default function InventoryPage({
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+                        <table className="w-full min-w-[640px] text-sm" aria-label="Danh sách tồn kho">
+                            <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                                 <tr>
-                                    <th className="px-4 py-3">SKU</th>
-                                    <th className="px-4 py-3">Sản phẩm</th>
-                                    <th className="px-4 py-3 text-right">Tồn đơn vị gốc</th>
-                                    <th className="px-4 py-3">Trạng thái</th>
+                                    <th scope="col" className="px-4 py-3">
+                                        SKU
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Sản phẩm
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Tồn đơn vị gốc
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Trạng thái
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {balances.data.map((balance) => {
                                     const qty = Number(balance.quantity_base);
                                     return (
-                                        <tr key={balance.id} className="border-t">
+                                        <tr key={balance.id} className="hover:bg-muted/50 border-t transition-colors">
                                             <td className="text-muted-foreground px-4 py-3">{balance.variant.product.sku}</td>
                                             <td className="px-4 font-medium">{balance.variant.product.name}</td>
                                             <td className={`px-4 text-right font-bold ${qty < 0 ? 'text-destructive' : ''}`}>
@@ -116,7 +129,7 @@ export default function InventoryPage({
                     />
                     <Pagination paginator={balances} routeUrl={route('inventory.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

@@ -201,6 +201,16 @@ test('categories default to active status filter', function () {
         ->where('categories.total', 1));
 });
 
+test('units default to active status filter', function () {
+    [$organization, , $owner] = catalogUser();
+    Unit::query()->create(['organization_id' => $organization->id, 'code' => 'EA', 'name' => 'Cái', 'is_active' => true]);
+    Unit::query()->create(['organization_id' => $organization->id, 'code' => 'BOX', 'name' => 'Hộp', 'is_active' => false]);
+
+    $this->actingAs($owner)->get(route('units.index'))->assertInertia(fn ($page) => $page
+        ->where('filters.status', 'active')
+        ->where('units.total', 1));
+});
+
 test('quick customer creation returns a customer ready for POS selection', function () {
     [$organization, , $owner] = catalogUser();
 

@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/shared';
+import { PageHeader, PageShell } from '@/components/shared';
 import { generateProductSku, ProductForm, type ProductFormData, type Unit } from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
@@ -36,10 +36,10 @@ export default function CreateProductPage({ categories, units }: { categories: A
             ]}
         >
             <Head title="Thêm sản phẩm" />
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-5 lg:p-6">
+            <PageShell className="mx-auto w-full max-w-4xl gap-6">
                 <PageHeader title="Thêm sản phẩm" description="Khai báo thông tin cơ bản, ảnh và các đơn vị bán." />
                 <ProductForm form={form} categories={categories} units={units} onCancel={() => window.history.back()} />
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

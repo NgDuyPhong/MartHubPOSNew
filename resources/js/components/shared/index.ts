@@ -6,6 +6,7 @@ export { FlashMessages } from './flash-messages';
 export { FormErrorSummary } from './form-error-summary';
 export { MoneyInput, formatMoneyInputValue, parseMoneyInputValue, type MoneyValue } from './money-input';
 export { PageHeader } from './page-header';
+export { PageShell } from './page-shell';
 export { Pagination } from './pagination';
 export { RowActions } from './row-actions';
 export { SearchField } from './search-field';

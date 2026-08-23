@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/shared';
+import { PageHeader, PageShell } from '@/components/shared';
 import { ProductForm, type Product, type ProductFormData, type Unit } from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
@@ -46,10 +46,10 @@ export default function EditProductPage({
             ]}
         >
             <Head title={`Sửa ${product.name}`} />
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-5 lg:p-6">
+            <PageShell className="mx-auto w-full max-w-4xl gap-6">
                 <PageHeader title="Sửa sản phẩm" description={product.sku} />
                 <ProductForm form={form} categories={categories} units={units} product={product} onCancel={() => window.history.back()} />
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

@@ -33,6 +33,7 @@ import {
     CatalogPanel,
     HeldCartsPanel,
     OpenShiftDialog,
+    PosNotices,
     PosStatusBar,
     QuickCustomerDialog,
     ReceiptPreview,
@@ -449,37 +450,14 @@ export default function PosPage({
                     hasLatestReceipt={Boolean(storedReceipt)}
                     onOpenLatestReceipt={() => setReceiptPreviewOpen(true)}
                 />
-                {message && (
-                    <div
-                        className="bg-info-muted text-info-foreground border-info/30 mb-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
-                        role="status"
-                    >
-                        <span>{message}</span>
-                        <div className="flex items-center gap-2">
-                            {undoCart.length > 0 && (
-                                <Button size="sm" variant="outline" onClick={undoClearCart}>
-                                    Hoàn tác
-                                </Button>
-                            )}
-                            <Button size="sm" variant="ghost" onClick={() => setMessage(null)}>
-                                Đóng
-                            </Button>
-                        </div>
-                    </div>
-                )}
-                {hasStaleCartPrice && (
-                    <div
-                        className="bg-warning-muted text-warning-foreground border-warning/40 mb-2 rounded-md border px-3 py-2 text-sm"
-                        role="status"
-                    >
-                        Giá catalog đã thay đổi; dòng hàng đang có trong giỏ vẫn giữ giá cũ. Sản phẩm thêm mới sẽ dùng giá hiện tại.
-                    </div>
-                )}
-                {unavailableCartLineCount > 0 && (
-                    <div className="bg-destructive/10 text-destructive border-destructive/30 mb-2 rounded-md border px-3 py-2 text-sm" role="alert">
-                        Có {unavailableCartLineCount} dòng hàng không còn khả dụng. Hãy xóa dòng đó và chọn sản phẩm khác trước khi thanh toán.
-                    </div>
-                )}
+                <PosNotices
+                    message={message}
+                    undoCartCount={undoCart.length}
+                    hasStaleCartPrice={hasStaleCartPrice}
+                    unavailableCartLineCount={unavailableCartLineCount}
+                    onUndo={undoClearCart}
+                    onDismiss={() => setMessage(null)}
+                />
                 <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
                         categories={currentCategories}

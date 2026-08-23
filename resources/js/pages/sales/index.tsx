@@ -1,4 +1,4 @@
-import { CollectionState, DateRangeFilter, FilterBar, getDateRangeError, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, DateRangeFilter, FilterBar, getDateRangeError, PageHeader, PageShell, Pagination, SearchField } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { NativeSelect } from '@/components/ui/native-select';
 import { useListQuery } from '@/hooks/use-list-query';
@@ -36,19 +36,29 @@ export default function SalesPage({
     return (
         <AppLayout breadcrumbs={[{ title: 'Hóa đơn', href: '/sales' }]}>
             <Head title="Hóa đơn" />
-            <div className="flex flex-col gap-4 p-4 md:p-5 lg:p-6">
+            <PageShell>
                 <PageHeader
                     title="Hóa đơn bán hàng"
                     description="Dữ liệu snapshot giữ nguyên tên, đơn vị, giá, chiết khấu và giá vốn tại thời điểm bán."
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm mã hóa đơn hoặc khách hàng…" />
-                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc thanh toán">
+                    <NativeSelect
+                        value={query.status}
+                        onChange={(event) => update('status', event.target.value)}
+                        aria-label="Lọc thanh toán"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Tất cả thanh toán</option>
                         <option value="paid">Đã đủ</option>
                         <option value="debt">Còn nợ</option>
                     </NativeSelect>
-                    <NativeSelect value={query.source} onChange={(event) => update('source', event.target.value)} aria-label="Lọc nguồn">
+                    <NativeSelect
+                        value={query.source}
+                        onChange={(event) => update('source', event.target.value)}
+                        aria-label="Lọc nguồn"
+                        className="md:w-44 md:shrink-0"
+                    >
                         <option value="all">Mọi nguồn</option>
                         <option value="online">Online</option>
                         <option value="offline_sync">Offline đã sync</option>
@@ -62,7 +72,12 @@ export default function SalesPage({
                         onToChange={(value) => update('to', value)}
                         error={dateRangeError}
                     />
-                    <NativeSelect value={query.sort} onChange={(event) => update('sort', event.target.value)} aria-label="Sắp xếp">
+                    <NativeSelect
+                        value={query.sort}
+                        onChange={(event) => update('sort', event.target.value)}
+                        aria-label="Sắp xếp"
+                        className="md:w-52 md:shrink-0"
+                    >
                         <option value="latest">Mới nhất</option>
                         <option value="oldest">Cũ nhất</option>
                         <option value="total">Tổng tiền cao nhất</option>
@@ -70,21 +85,35 @@ export default function SalesPage({
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
+                        <table className="w-full min-w-[860px] text-sm" aria-label="Danh sách hóa đơn">
+                            <thead className="bg-muted text-muted-foreground text-left text-xs font-semibold tracking-wide uppercase">
                                 <tr>
-                                    <th className="px-4 py-3">Hóa đơn</th>
-                                    <th className="px-4 py-3">Thời gian</th>
-                                    <th className="px-4 py-3">Khách hàng</th>
-                                    <th className="px-4 py-3 text-right">Tổng</th>
-                                    <th className="px-4 py-3 text-right">Đã thu</th>
-                                    <th className="px-4 py-3 text-right">Còn nợ</th>
-                                    <th className="px-4 py-3">Nguồn</th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Hóa đơn
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Thời gian
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Khách hàng
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Tổng
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Đã thu
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-right">
+                                        Còn nợ
+                                    </th>
+                                    <th scope="col" className="px-4 py-3">
+                                        Nguồn
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sales.data.map((sale) => (
-                                    <tr key={sale.id} className="border-t">
+                                    <tr key={sale.id} className="hover:bg-muted/50 border-t transition-colors">
                                         <td className="px-4 py-3">
                                             <Link href={`/sales/${sale.id}`} className="text-primary font-semibold">
                                                 {sale.invoice_number}
@@ -115,7 +144,7 @@ export default function SalesPage({
                     />
                     <Pagination paginator={sales} routeUrl={route('sales.index')} query={query} />
                 </div>
-            </div>
+            </PageShell>
         </AppLayout>
     );
 }

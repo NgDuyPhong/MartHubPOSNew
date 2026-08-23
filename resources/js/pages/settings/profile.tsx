@@ -38,16 +38,16 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
             <Head title="Cài đặt hồ sơ" />
 
             <SettingsLayout>
-                <div className="space-y-6">
+                <div className="flex flex-col gap-6">
                     <HeadingSmall title="Thông tin hồ sơ" description="Cập nhật tên và địa chỉ email" />
 
-                    <form onSubmit={submit} className="space-y-6">
+                    <form onSubmit={submit} className="flex flex-col gap-6">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Tên</Label>
 
                             <Input
                                 id="name"
-                                className="mt-1 block w-full"
+                                className="w-full"
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
                                 required
@@ -55,7 +55,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 placeholder="Họ và tên"
                             />
 
-                            <InputError className="mt-2" message={errors.name} />
+                            <InputError message={errors.name} />
                         </div>
 
                         <div className="grid gap-2">
@@ -64,7 +64,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             <Input
                                 id="email"
                                 type="email"
-                                className="mt-1 block w-full"
+                                className="w-full"
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 required
@@ -72,25 +72,25 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 placeholder="Địa chỉ email"
                             />
 
-                            <InputError className="mt-2" message={errors.email} />
+                            <InputError message={errors.email} />
                         </div>
 
                         {mustVerifyEmail && auth.user.email_verified_at === null && (
                             <div>
-                                <p className="mt-2 text-sm text-neutral-800">
+                                <p className="text-foreground text-sm">
                                     Địa chỉ email của bạn chưa được xác minh.
                                     <Link
                                         href={route('verification.send')}
                                         method="post"
                                         as="button"
-                                        className="rounded-md text-sm text-neutral-600 underline hover:text-neutral-900 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                        className="text-muted-foreground hover:text-foreground focus:ring-ring rounded-md text-sm underline focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
                                     >
                                         Nhấp vào đây để gửi lại email xác minh.
                                     </Link>
                                 </p>
 
                                 {status === 'verification-link-sent' && (
-                                    <div className="mt-2 text-sm font-medium text-green-600">
+                                    <div className="text-success text-sm font-medium">
                                         Một liên kết xác minh mới đã được gửi đến địa chỉ email của bạn.
                                     </div>
                                 )}
@@ -107,7 +107,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 leave="transition ease-in-out"
                                 leaveTo="opacity-0"
                             >
-                                <p className="text-sm text-neutral-600">Đã lưu</p>
+                                <p className="text-muted-foreground text-sm">Đã lưu</p>
                             </Transition>
                         </div>
                     </form>

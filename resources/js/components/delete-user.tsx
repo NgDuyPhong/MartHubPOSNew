@@ -32,10 +32,10 @@ export default function DeleteUser() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
             <HeadingSmall title="Xóa tài khoản" description="Xóa tài khoản và toàn bộ dữ liệu liên quan" />
-            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                <div className="text-destructive relative space-y-0.5">
+            <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-4 rounded-lg border p-4">
+                <div className="text-destructive relative flex flex-col gap-0.5">
                     <p className="font-medium">Cảnh báo</p>
                     <p className="text-sm">Vui lòng cân nhắc kỹ vì thao tác này không thể hoàn tác.</p>
                 </div>
@@ -50,7 +50,7 @@ export default function DeleteUser() {
                             Sau khi xóa, toàn bộ dữ liệu và tài nguyên của tài khoản cũng sẽ bị xóa vĩnh viễn. Vui lòng nhập mật khẩu để xác nhận bạn
                             muốn xóa tài khoản vĩnh viễn.
                         </DialogDescription>
-                        <form className="space-y-6" onSubmit={deleteUser}>
+                        <form className="flex flex-col gap-6" onSubmit={deleteUser}>
                             <div className="grid gap-2">
                                 <Label htmlFor="password" className="sr-only">
                                     Mật khẩu

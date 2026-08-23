@@ -1,7 +1,5 @@
 <?php
 
-it('returns a successful response', function () {
-    $response = $this->get('/');
-
-    $response->assertStatus(200);
+it('renders the public welcome page', function () {
+    $this->get('/')->assertInertia(fn ($page) => $page->component('welcome'));
 });
