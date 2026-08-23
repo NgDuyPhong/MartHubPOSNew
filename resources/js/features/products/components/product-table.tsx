@@ -94,7 +94,7 @@ export function ProductTable({
                                 <td className="px-4 py-3">
                                     {product.is_active ? <Badge>Đang bán</Badge> : <Badge variant="outline">Ngừng bán</Badge>}
                                 </td>
-                                <td className="px-4">
+                                <td className="px-4 py-3">
                                     {canManageCatalog && (
                                         <div className="flex items-center justify-end gap-1">
                                             <Button asChild size="sm" variant="ghost">

@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { Button } from './button';
 
 describe('Button', () => {
+    it.each(['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'] as const)('renders a border for the %s variant', (variant) => {
+        render(<Button variant={variant}>Action</Button>);
+
+        expect(screen.getByRole('button', { name: 'Action' })).toHaveClass('border');
+    });
+
     it('exposes button semantics and handles activation', async () => {
         const user = userEvent.setup();
         const handleClick = vi.fn();
