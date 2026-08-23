@@ -2,6 +2,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
+import { useFocusReturn } from '@/hooks/use-focus-return';
 import type { InertiaFormProps } from '@inertiajs/react';
 import type { ReturnFormData, SaleItem } from '../model/types';
 import { ReturnItemsTable } from './return-items-table';
@@ -25,9 +27,22 @@ export function ReturnDialog({
     form: InertiaFormProps<ReturnFormData>;
     onSubmit: (event: React.FormEvent) => void;
 }) {
+    const { captureFocus, restoreFocus } = useFocusReturn(open);
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) restoreFocus();
+        onOpenChange(nextOpen);
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl">
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent
+                className="max-w-3xl"
+                onOpenAutoFocus={() => captureFocus()}
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    restoreFocus();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>Đổi / trả từ {invoiceNumber}</DialogTitle>
                     <DialogDescription>Chỉ nhập số lượng cần trả. Hàng còn bán được sẽ cộng lại tồn kho.</DialogDescription>
@@ -37,7 +52,7 @@ export function ReturnDialog({
                     <div className="grid gap-3 md:grid-cols-3">
                         <div>
                             <Label htmlFor="return-type">Loại xử lý</Label>
-                            <select
+                            <NativeSelect
                                 id="return-type"
                                 className="bg-background h-10 w-full rounded-md border px-2"
                                 value={form.data.type}
@@ -45,11 +60,11 @@ export function ReturnDialog({
                             >
                                 <option value="refund">Trả hàng</option>
                                 <option value="exchange">Đổi hàng</option>
-                            </select>
+                            </NativeSelect>
                         </div>
                         <div>
                             <Label htmlFor="refund-method">Hoàn tiền / cấn nợ</Label>
-                            <select
+                            <NativeSelect
                                 id="refund-method"
                                 className="bg-background h-10 w-full rounded-md border px-2"
                                 value={form.data.refund_method}
@@ -58,7 +73,7 @@ export function ReturnDialog({
                                 <option value="cash">Tiền mặt</option>
                                 <option value="qr">QR</option>
                                 {customer && <option value="debt">Cấn trừ công nợ</option>}
-                            </select>
+                            </NativeSelect>
                         </div>
                         <div>
                             <Label htmlFor="return-reason">Lý do *</Label>
@@ -72,6 +87,9 @@ export function ReturnDialog({
                     </div>
                     {!activeShift && <p className="text-destructive text-sm">Cần mở ca trước khi đổi trả.</p>}
                     <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={form.processing}>
+                            Hủy
+                        </Button>
                         <Button type="submit" disabled={form.processing || !activeShift}>
                             Xác nhận đổi/trả
                         </Button>

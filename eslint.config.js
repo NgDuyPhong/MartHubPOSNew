@@ -28,8 +28,8 @@ const featureImportBoundary = {
                         message: 'A feature must not import another feature; move a stable contract to shared/lib if it is truly cross-domain.',
                     },
                     {
-                        regex: '^(?:@/components/(?!ui(?:/|$))|(?:\\.\\./)+components/(?!ui(?:/|$)))',
-                        message: 'Features may use components/ui primitives, but must not depend on app-shell components.',
+                        regex: '^(?:@/components/(?!ui(?:/|$)|shared(?:/|$))|(?:\\.\\./)+components/(?!ui(?:/|$)|shared(?:/|$)))',
+                        message: 'Features may use components/ui primitives and stable components/shared patterns, but must not depend on app-shell components.',
                     },
                 ],
             },

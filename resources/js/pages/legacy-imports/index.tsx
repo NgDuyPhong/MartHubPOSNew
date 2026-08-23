@@ -53,7 +53,7 @@ export default function LegacyImportsPage() {
                     </div>
                     <div className="bg-card rounded-lg border px-4 py-3 text-sm shadow-xs">
                         <div className="flex items-center gap-2 font-medium">
-                            <ShieldCheck className="size-4 text-emerald-600" /> Chỉ owner/manager
+                            <ShieldCheck className="text-success size-4" /> Chỉ owner/manager
                         </div>
                         <p className="text-muted-foreground mt-1">Dữ liệu được lưu trong private storage.</p>
                     </div>

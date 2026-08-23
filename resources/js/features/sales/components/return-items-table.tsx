@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { remainingReturnQuantity, updateReturnItem } from '../model/selectors';
 import type { ReturnFormData, SaleItem } from '../model/types';
@@ -38,7 +39,7 @@ export function ReturnItemsTable({ saleItems, form }: { saleItems: SaleItem[]; f
                                     />
                                 </td>
                                 <td className="p-2">
-                                    <select
+                                    <NativeSelect
                                         aria-label={`Tình trạng ${item.product_name}`}
                                         className="bg-background h-9 rounded-md border px-2"
                                         value={form.data.items[index].condition}
@@ -48,7 +49,7 @@ export function ReturnItemsTable({ saleItems, form }: { saleItems: SaleItem[]; f
                                     >
                                         <option value="resellable">Còn bán được</option>
                                         <option value="damaged">Hỏng / hủy</option>
-                                    </select>
+                                    </NativeSelect>
                                 </td>
                             </tr>
                         );

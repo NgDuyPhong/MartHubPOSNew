@@ -1,6 +1,6 @@
+import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Pagination, SearchField } from '@/components/shared';
-import { useListQuery } from '@/hooks/use-list-query';
 import {
     StockReceiptForm,
     StockReceiptHistory,
@@ -12,16 +12,25 @@ import {
     type StockReceiptFormData,
     type StockReceiptRow,
 } from '@/features/stock-receipts';
+import { useListQuery } from '@/hooks/use-list-query';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
 import type { Paginated } from '@/types/pagination';
+import { Head, useForm } from '@inertiajs/react';
 import { PackagePlus, Upload } from 'lucide-react';
 import { FormEvent, useRef, useState } from 'react';
 
 type Receipt = { id: number; receipt_number: string; source: string; supplier_name?: string; items_count: number; received_at: string };
 
-export default function StockReceiptsPage({ receipts, productUnits, filters }: { receipts: Paginated<Receipt>; productUnits: ProductUnit[]; filters: { search: string; per_page: number } }) {
-    const { query, update } = useListQuery(route('stock-receipts.index'), { ...filters, page: 1 });
+export default function StockReceiptsPage({
+    receipts,
+    productUnits,
+    filters,
+}: {
+    receipts: Paginated<Receipt>;
+    productUnits: ProductUnit[];
+    filters: { search: string; per_page: number };
+}) {
+    const { query, update, reset, isLoading, error, retry } = useListQuery(route('stock-receipts.index'), { ...filters, page: 1 });
     const [showForm, setShowForm] = useState(false);
     const [importMessage, setImportMessage] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
@@ -72,36 +81,40 @@ export default function StockReceiptsPage({ receipts, productUnits, filters }: {
         <AppLayout breadcrumbs={[{ title: 'Nhập kho', href: route('stock-receipts.index') }]}>
             <Head title="Nhập kho" />
             <div className="space-y-4 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                        <h1 className="text-2xl font-bold">Bổ sung tồn kho</h1>
-                        <p className="text-sm text-slate-500">Nhập tay hoặc import Excel; giá vốn cập nhật theo lần nhập cuối.</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={downloadStockReceiptTemplate}>
-                            Tải file mẫu .xlsx
-                        </Button>
-                        <input
-                            ref={fileRef}
-                            className="hidden"
-                            type="file"
-                            accept=".xlsx,.csv"
-                            onChange={(event) => event.target.files?.[0] && parseFile(event.target.files[0])}
-                        />
-                        <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                            <Upload className="mr-2 size-4" />
-                            Import Excel
-                        </Button>
-                        <Button onClick={() => setShowForm(!showForm)}>
-                            <PackagePlus className="mr-2 size-4" />
-                            Nhập tay
-                        </Button>
-                    </div>
-                </div>
-                {importMessage && <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">{importMessage}</div>}
-                <div className="flex rounded-lg border bg-card p-3 shadow-sm">
+                <PageHeader
+                    title="Bổ sung tồn kho"
+                    description="Nhập tay hoặc import Excel; giá vốn cập nhật theo lần nhập cuối."
+                    actions={
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" onClick={downloadStockReceiptTemplate}>
+                                Tải file mẫu .xlsx
+                            </Button>
+                            <input
+                                ref={fileRef}
+                                className="hidden"
+                                type="file"
+                                accept=".xlsx,.csv"
+                                onChange={(event) => event.target.files?.[0] && parseFile(event.target.files[0])}
+                            />
+                            <Button variant="outline" onClick={() => fileRef.current?.click()}>
+                                <Upload className="mr-2 size-4" />
+                                Import Excel
+                            </Button>
+                            <Button onClick={() => setShowForm(!showForm)}>
+                                <PackagePlus className="mr-2 size-4" />
+                                Nhập tay
+                            </Button>
+                        </div>
+                    }
+                />
+                {importMessage && (
+                    <Alert variant="info">
+                        <AlertDescription>{importMessage}</AlertDescription>
+                    </Alert>
+                )}
+                <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm mã phiếu hoặc nhà cung cấp…" />
-                </div>
+                </FilterBar>
                 {showForm && (
                     <StockReceiptForm
                         form={form}
@@ -112,8 +125,19 @@ export default function StockReceiptsPage({ receipts, productUnits, filters }: {
                         onSubmit={submit}
                     />
                 )}
-                <StockReceiptHistory receipts={receipts.data} />
-                <div className="bg-card overflow-hidden rounded-lg border shadow-sm"><Pagination paginator={receipts} routeUrl={route('stock-receipts.index')} query={query} /></div>
+                {receipts.data.length > 0 && <StockReceiptHistory receipts={receipts.data} />}
+                <CollectionState
+                    isEmpty={!receipts.data.length}
+                    hasFilters={Boolean(query.search)}
+                    onReset={reset}
+                    error={error}
+                    onRetry={retry}
+                    isLoading={isLoading}
+                    label="phiếu nhập kho"
+                />
+                <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
+                    <Pagination paginator={receipts} routeUrl={route('stock-receipts.index')} query={query} />
+                </div>
             </div>
         </AppLayout>
     );

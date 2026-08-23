@@ -1,7 +1,9 @@
+import { FieldError, FormErrorSummary, MoneyInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
+import { useFocusReturn } from '@/hooks/use-focus-return';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 
@@ -16,22 +18,32 @@ export function OpenShiftDialog({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     registers: Array<{ id: number; name: string }>;
-    form: InertiaFormProps<{ register_id: number; opening_cash: number }>;
+    form: InertiaFormProps<{ register_id: number; opening_cash: number | '' }>;
     searchRef: React.RefObject<HTMLInputElement | null>;
     required?: boolean;
 }) {
     const hasRegister = registers.length > 0;
+    const { captureFocus, restoreFocus } = useFocusReturn(open);
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) restoreFocus();
+        onOpenChange(nextOpen);
+    };
 
     return (
         <Dialog
             open={open}
             onOpenChange={(nextOpen) => {
                 if (required && !nextOpen) return;
-                onOpenChange(nextOpen);
+                handleOpenChange(nextOpen);
             }}
         >
             <DialogContent
                 showClose={!required}
+                onOpenAutoFocus={() => captureFocus()}
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    restoreFocus();
+                }}
                 onEscapeKeyDown={(event) => {
                     if (required) event.preventDefault();
                 }}
@@ -57,7 +69,7 @@ export function OpenShiftDialog({
                         form.post(route('shifts.store'), {
                             preserveScroll: true,
                             onSuccess: () => {
-                                onOpenChange(false);
+                                handleOpenChange(false);
                                 form.reset();
                                 searchRef.current?.focus();
                             },
@@ -68,12 +80,14 @@ export function OpenShiftDialog({
                     <div>
                         <Label htmlFor="pos-open-shift-register">Quầy</Label>
                         {hasRegister ? (
-                            <select
+                            <NativeSelect
                                 id="pos-open-shift-register"
                                 name="register_id"
                                 value={form.data.register_id}
                                 onChange={(event) => form.setData('register_id', Number(event.target.value))}
                                 className="bg-background mt-1 h-10 w-full rounded-md border px-3"
+                                aria-invalid={form.errors.register_id ? true : undefined}
+                                aria-describedby={form.errors.register_id ? 'pos-open-shift-register-error' : undefined}
                                 required
                             >
                                 {registers.map((register) => (
@@ -81,31 +95,35 @@ export function OpenShiftDialog({
                                         {register.name}
                                     </option>
                                 ))}
-                            </select>
+                            </NativeSelect>
                         ) : (
                             <div className="bg-muted text-muted-foreground mt-1 rounded-md border px-3 py-2 text-sm" role="alert">
                                 Chưa có đúng một quầy hoạt động cho chi nhánh. Hãy nhờ quản lý kiểm tra cấu hình quầy trước khi mở ca.
                             </div>
                         )}
+                        <FieldError id="pos-open-shift-register-error" message={form.errors.register_id} />
                     </div>
                     <div>
                         <Label htmlFor="pos-opening-cash">Tiền đầu ca</Label>
-                        <Input
+                        <MoneyInput
                             id="pos-opening-cash"
                             name="opening_cash"
-                            type="number"
-                            min="0"
+                            min={0}
                             value={form.data.opening_cash}
-                            onChange={(event) => form.setData('opening_cash', Number(event.target.value))}
+                            onValueChange={(value) => form.setData('opening_cash', value)}
+                            invalid={Boolean(form.errors.opening_cash)}
+                            aria-describedby={form.errors.opening_cash ? 'pos-opening-cash-error' : undefined}
                             required
                         />
+                        <FieldError id="pos-opening-cash-error" message={form.errors.opening_cash} />
                     </div>
-                    {Object.keys(form.errors).length > 0 && (
-                        <div className="text-destructive border-destructive/30 bg-destructive/10 rounded-md border px-3 py-2 text-sm">
-                            {Object.values(form.errors)[0]}
-                        </div>
-                    )}
+                    <FormErrorSummary errors={form.errors} />
                     <DialogFooter>
+                        {!required && (
+                            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={form.processing}>
+                                Hủy
+                            </Button>
+                        )}
                         <Button type="submit" disabled={form.processing || !hasRegister || form.data.register_id <= 0}>
                             {form.processing ? 'Đang mở ca...' : 'Mở ca'}
                         </Button>

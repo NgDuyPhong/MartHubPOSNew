@@ -1,7 +1,8 @@
 import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import { NativeSelect } from '@/components/ui/native-select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { ProductStatusDialog, ProductTable, type Product } from '@/features/products';
+import { ProductQuickEditSheet, ProductStatusDialog, ProductTable, type Product } from '@/features/products';
 import { useListQuery } from '@/hooks/use-list-query';
 import AppLayout from '@/layouts/app-layout';
 import type { Paginated } from '@/types/pagination';
@@ -23,12 +24,14 @@ export default function ProductsPage({
     filters: Omit<ProductFilters, 'page'>;
     canManageCatalog: boolean;
 }) {
-    const { query, update, reset } = useListQuery<ProductFilters>(route('products.index'), {
+    const { query, update, reset, isLoading, error, retry } = useListQuery<ProductFilters>(route('products.index'), {
         ...filters,
         status: filters.status || 'active',
         page: 1,
     });
     const [statusProduct, setStatusProduct] = useState<Product | null>(null);
+    const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+    const [quickEditUnitId, setQuickEditUnitId] = useState<number | undefined>();
     const statusForm = useForm<{ is_active: boolean; updated_at: string }>({ is_active: false, updated_at: '' });
     const confirmStatus = () => {
         if (!statusProduct) return;
@@ -71,18 +74,12 @@ export default function ProductsPage({
                         clearable
                         className="md:min-w-56"
                     />
-                    <select
-                        className="bg-background h-10 rounded-md border px-3 text-sm"
-                        value={query.status}
-                        onChange={(event) => update('status', event.target.value)}
-                        aria-label="Lọc trạng thái"
-                    >
+                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
                         <option value="all">Tất cả trạng thái</option>
                         <option value="active">Đang bán</option>
                         <option value="inactive">Ngừng bán</option>
-                    </select>
-                    <select
-                        className="bg-background h-10 rounded-md border px-3 text-sm"
+                    </NativeSelect>
+                    <NativeSelect
                         value={query.sort}
                         onChange={(event) => {
                             update('sort', event.target.value);
@@ -93,23 +90,29 @@ export default function ProductsPage({
                         <option value="latest">Mới tạo</option>
                         <option value="name">Tên A-Z</option>
                         <option value="sku">SKU</option>
-                    </select>
-                    <select
-                        className="bg-background h-10 rounded-md border px-3 text-sm"
-                        value={query.direction}
-                        onChange={(event) => update('direction', event.target.value)}
-                        aria-label="Chiều sắp xếp"
-                    >
+                    </NativeSelect>
+                    <NativeSelect value={query.direction} onChange={(event) => update('direction', event.target.value)} aria-label="Chiều sắp xếp">
                         <option value="asc">Tăng dần</option>
                         <option value="desc">Giảm dần</option>
-                    </select>
+                    </NativeSelect>
                 </FilterBar>
                 <div className="bg-card overflow-hidden rounded-lg border">
-                    <ProductTable products={products.data} onStatus={setStatusProduct} canManageCatalog={canManageCatalog} />
+                    <ProductTable
+                        products={products.data}
+                        onStatus={setStatusProduct}
+                        onQuickEdit={(product, unitId) => {
+                            setQuickEditProduct(product);
+                            setQuickEditUnitId(unitId);
+                        }}
+                        canManageCatalog={canManageCatalog}
+                    />
                     <CollectionState
                         isEmpty={!products.data.length}
                         hasFilters={Boolean(query.search || query.category_id || query.status !== 'active' || query.sort !== 'latest')}
                         onReset={reset}
+                        error={error}
+                        onRetry={retry}
+                        isLoading={isLoading}
                         label="sản phẩm"
                     />
                     <Pagination paginator={products} routeUrl={route('products.index')} query={query} />
@@ -122,6 +125,18 @@ export default function ProductsPage({
                         if (!open) setStatusProduct(null);
                     }}
                     onConfirm={confirmStatus}
+                />
+                <ProductQuickEditSheet
+                    product={quickEditProduct}
+                    unitId={quickEditUnitId}
+                    categories={categories}
+                    open={quickEditProduct !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setQuickEditProduct(null);
+                            setQuickEditUnitId(undefined);
+                        }
+                    }}
                 />
             </div>
         </AppLayout>

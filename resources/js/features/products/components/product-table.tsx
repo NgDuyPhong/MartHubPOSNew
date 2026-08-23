@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatMoney, formatQuantity } from '@/lib/format';
 import { Link } from '@inertiajs/react';
-import { Package, Pencil, Power } from 'lucide-react';
+import { Package, Pencil, Power, Tags } from 'lucide-react';
 import { useState } from 'react';
 import type { Product } from '../model/types';
 
@@ -33,10 +33,12 @@ function ProductThumbnail({ product }: { product: Product }) {
 export function ProductTable({
     products,
     onStatus,
+    onQuickEdit,
     canManageCatalog,
 }: {
     products: Product[];
     onStatus: (product: Product) => void;
+    onQuickEdit: (product: Product, unitId: number) => void;
     canManageCatalog: boolean;
 }) {
     return (
@@ -56,6 +58,7 @@ export function ProductTable({
                 <tbody>
                     {products.map((product) => {
                         const variant = product.variants[0];
+                        const defaultUnit = product.is_active ? variant?.units.find((item) => item.is_default_sale) : undefined;
                         return (
                             <tr key={product.id} className="hover:bg-muted/50 border-t align-top">
                                 <td className="px-4 py-3">
@@ -76,14 +79,14 @@ export function ProductTable({
                                         {variant?.units.map((item) => (
                                             <span key={item.id} className="bg-muted rounded border px-2 py-1 text-xs">
                                                 {item.unit.name} × {Number(item.conversion_to_base)} · {formatMoney(item.sale_price)}đ{' '}
-                                                {item.is_base && <b className="text-blue-700">(gốc)</b>}
+                                                {item.is_base && <b className="text-primary">(gốc)</b>}
                                                 <small className="text-muted-foreground block">{item.barcodes[0]?.value || 'chưa có barcode'}</small>
                                             </span>
                                         ))}
                                     </div>
                                 </td>
                                 <td
-                                    className={`px-4 py-3 text-right font-semibold ${Number(variant?.balances[0]?.quantity_base ?? 0) < 0 ? 'text-red-600' : ''}`}
+                                    className={`px-4 py-3 text-right font-semibold ${Number(variant?.balances[0]?.quantity_base ?? 0) < 0 ? 'text-destructive' : ''}`}
                                 >
                                     {formatQuantity(Number(variant?.balances[0]?.quantity_base ?? 0))}
                                 </td>
@@ -99,6 +102,21 @@ export function ProductTable({
                                                     <Pencil />
                                                     Sửa
                                                 </Link>
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={!defaultUnit}
+                                                title={defaultUnit ? 'Sửa giá của đơn vị bán mặc định' : 'Sản phẩm chưa có đơn vị bán mặc định'}
+                                                aria-label={
+                                                    defaultUnit
+                                                        ? `Sửa giá ${product.name}`
+                                                        : `Không thể sửa giá ${product.name}: chưa có đơn vị bán mặc định`
+                                                }
+                                                onClick={() => defaultUnit && onQuickEdit(product, defaultUnit.id)}
+                                            >
+                                                <Tags />
+                                                Sửa giá
                                             </Button>
                                             <Button
                                                 size="sm"

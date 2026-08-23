@@ -1,9 +1,12 @@
+import { FieldError, FormErrorSummary, MoneyInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useForm } from '@inertiajs/react';
+import { useFocusReturn } from '@/hooks/use-focus-return';
+import { Link, useForm } from '@inertiajs/react';
+import { ExternalLink } from 'lucide-react';
 import { useEffect, type FormEvent } from 'react';
 
 type QuickEditProduct = {
@@ -22,7 +25,7 @@ type QuickEditData = {
     name: string;
     category_id: number | '';
     product_unit_id: number;
-    sale_price: number;
+    sale_price: number | '';
     updated_at: string;
 };
 
@@ -43,6 +46,11 @@ export function ProductQuickEditSheet({
 }) {
     const variant = product?.variants[0];
     const unit = variant?.units.find((item) => item.id === unitId) ?? variant?.units.find((item) => item.is_default_sale) ?? variant?.units[0];
+    const { captureFocus, restoreFocus } = useFocusReturn(open);
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) restoreFocus();
+        onOpenChange(nextOpen);
+    };
     const form = useForm<QuickEditData>({
         name: product?.name ?? '',
         category_id: product?.category_id ?? '',
@@ -71,22 +79,37 @@ export function ProductQuickEditSheet({
         form.patch(route('products.quick-update', product.id), {
             preserveScroll: true,
             onSuccess: () => {
-                onOpenChange(false);
+                handleOpenChange(false);
                 form.reset();
             },
         });
     };
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+            <SheetContent
+                className="w-full overflow-y-auto sm:max-w-lg"
+                onOpenAutoFocus={() => captureFocus()}
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    restoreFocus();
+                }}
+            >
                 <SheetHeader>
                     <SheetTitle>Sửa nhanh sản phẩm</SheetTitle>
-                    <SheetDescription>Thay đổi tên, danh mục hoặc giá của đơn vị đang chọn. Dữ liệu hóa đơn cũ không thay đổi.</SheetDescription>
+                    <SheetDescription>
+                        <span>Thay đổi tên, danh mục hoặc giá của đơn vị đang chọn. Dữ liệu hóa đơn cũ không thay đổi.</span>
+                        {product && (
+                            <span className="text-foreground mt-2 block font-medium">
+                                {product.name} · SKU {product.sku} · Đơn vị {unit?.unit.name ?? 'chưa xác định'}
+                            </span>
+                        )}
+                    </SheetDescription>
                 </SheetHeader>
                 <form onSubmit={submit} className="flex flex-col gap-5 px-6 py-4">
+                    <FormErrorSummary errors={form.errors} />
                     {!online && (
-                        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="border-warning/40 bg-warning-muted text-warning-foreground rounded-md border p-3 text-sm">
                             Cần kết nối mạng để sửa dữ liệu sản phẩm.
                         </p>
                     )}
@@ -97,9 +120,26 @@ export function ProductQuickEditSheet({
                             disabled={!online}
                             value={form.data.name}
                             onChange={(event) => form.setData('name', event.target.value)}
+                            aria-invalid={form.errors.name ? true : undefined}
+                            aria-describedby={form.errors.name ? 'quick-product-name-error' : undefined}
                             required
                         />
-                        {form.errors.name && <p className="text-destructive text-xs">{form.errors.name}</p>}
+                        <FieldError id="quick-product-name-error" message={form.errors.name} />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="quick-product-price">Giá bán · {unit?.unit.name ?? 'đơn vị'}</Label>
+                        <MoneyInput
+                            id="quick-product-price"
+                            min={0}
+                            value={form.data.sale_price}
+                            disabled={!online}
+                            syncKey={`${product?.id ?? 'none'}-${unit?.id ?? 'none'}`}
+                            onValueChange={(value) => form.setData('sale_price', value)}
+                            invalid={Boolean(form.errors.sale_price)}
+                            aria-describedby={form.errors.sale_price ? 'quick-product-price-error' : undefined}
+                            required
+                        />
+                        <FieldError id="quick-product-price-error" message={form.errors.sale_price} />
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="quick-product-category">Danh mục</Label>
@@ -122,32 +162,28 @@ export function ProductQuickEditSheet({
                             aria-describedby={form.errors.category_id ? 'quick-product-category-error' : undefined}
                             clearable
                         />
-                        {form.errors.category_id && (
-                            <p id="quick-product-category-error" className="text-destructive text-xs">
-                                {form.errors.category_id}
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <Label htmlFor="quick-product-price">Giá bán · {unit?.unit.name ?? 'đơn vị'}</Label>
-                        <Input
-                            id="quick-product-price"
-                            type="number"
-                            min="0"
-                            value={form.data.sale_price}
-                            disabled={!online}
-                            onChange={(event) => form.setData('sale_price', Math.max(0, Number(event.target.value)))}
-                            required
-                        />
-                        {form.errors.sale_price && <p className="text-destructive text-xs">{form.errors.sale_price}</p>}
+                        <FieldError id="quick-product-category-error" message={form.errors.category_id} />
                     </div>
                     <p className="text-muted-foreground bg-muted/40 rounded-md border p-3 text-xs">
                         Sản phẩm đang được sửa: <strong>{product?.sku}</strong>. Giá của dòng hàng đã có trong giỏ sẽ được giữ nguyên.
                     </p>
                     <SheetFooter className="px-0">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                             Hủy
                         </Button>
+                        {product && online ? (
+                            <Button asChild variant="secondary">
+                                <Link href={route('products.edit', product.id)}>
+                                    <ExternalLink />
+                                    Mở trang sửa
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button type="button" variant="secondary" disabled>
+                                <ExternalLink />
+                                Mở trang sửa
+                            </Button>
+                        )}
                         <Button type="submit" disabled={form.processing || !product || !online}>
                             {form.processing ? 'Đang lưu…' : 'Lưu thay đổi'}
                         </Button>

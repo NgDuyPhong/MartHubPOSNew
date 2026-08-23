@@ -33,15 +33,31 @@ export function CustomerTable({
                         const balance = customerBalance(customer);
                         return (
                             <tr key={customer.id} className="border-t">
-                                <td className="px-4 py-3 text-slate-500">{customer.code}</td>
+                                <td className="text-muted-foreground px-4 py-3">{customer.code}</td>
                                 <td className="px-4 font-semibold">{customer.name}</td>
                                 <td className="px-4">{customer.phone || '—'}</td>
                                 <td className="px-4">{customer.address || '—'}</td>
-                                <td className={`px-4 text-right font-bold ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                <td className={`px-4 text-right font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
                                     {formatMoney(balance)}đ
                                 </td>
                                 <td className="px-4 text-right">
-                                    <div className="flex justify-end gap-1">{canReceiveDebt(customer) && <Button size="sm" variant="outline" disabled={!activeShift} onClick={() => onReceiveDebt(customer, balance)}><Banknote className="mr-1 size-3" />Thu nợ</Button>}<Button size="sm" variant="ghost" onClick={() => onEdit(customer)}><Pencil className="mr-1 size-3" />Sửa</Button></div>
+                                    <div className="flex justify-end gap-1">
+                                        {canReceiveDebt(customer) && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={!activeShift}
+                                                onClick={() => onReceiveDebt(customer, balance)}
+                                            >
+                                                <Banknote className="mr-1 size-3" />
+                                                Thu nợ
+                                            </Button>
+                                        )}
+                                        <Button size="sm" variant="ghost" onClick={() => onEdit(customer)}>
+                                            <Pencil className="mr-1 size-3" />
+                                            Sửa
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                         );

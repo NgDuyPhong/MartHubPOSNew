@@ -30,7 +30,7 @@ export function SearchField({
                 <button
                     type="button"
                     onClick={() => onChange('')}
-                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-1 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-1 focus-visible:ring-2"
                     aria-label="Xóa tìm kiếm"
                 >
                     <X className="size-4" />

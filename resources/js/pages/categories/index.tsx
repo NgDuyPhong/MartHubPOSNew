@@ -1,9 +1,11 @@
-import { CollectionState, FilterBar, PageHeader, Pagination, SearchField } from '@/components/shared';
+import { CollectionState, FieldError, FilterBar, FormErrorSummary, PageHeader, Pagination, SearchField } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useListQuery } from '@/hooks/use-list-query';
 import AppLayout from '@/layouts/app-layout';
@@ -81,7 +83,11 @@ export default function CategoriesPage({
     filters: Omit<Filters, 'page'>;
     canManageCatalog: boolean;
 }) {
-    const { query, update, reset } = useListQuery<Filters>(route('categories.index'), { ...filters, status: filters.status || 'active', page: 1 });
+    const { query, update, reset, isLoading, error, retry } = useListQuery<Filters>(route('categories.index'), {
+        ...filters,
+        status: filters.status || 'active',
+        page: 1,
+    });
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState<Category | null>(null);
     const [statusCategory, setStatusCategory] = useState<Category | null>(null);
@@ -167,16 +173,11 @@ export default function CategoriesPage({
                 />
                 <FilterBar>
                     <SearchField value={query.search} onChange={(value) => update('search', value)} placeholder="Tìm tên hoặc mã danh mục…" />
-                    <select
-                        className="bg-background h-10 rounded-md border px-3 text-sm"
-                        value={query.status}
-                        onChange={(event) => update('status', event.target.value)}
-                        aria-label="Lọc trạng thái"
-                    >
+                    <NativeSelect value={query.status} onChange={(event) => update('status', event.target.value)} aria-label="Lọc trạng thái">
                         <option value="all">Tất cả trạng thái</option>
                         <option value="active">Đang dùng</option>
                         <option value="inactive">Ngừng dùng</option>
-                    </select>
+                    </NativeSelect>
                     <SearchableSelect
                         value={query.parent_id === null ? null : String(query.parent_id)}
                         options={parentCategoryOptions}
@@ -242,7 +243,15 @@ export default function CategoriesPage({
                             </tbody>
                         </table>
                     </div>
-                    <CollectionState isEmpty={!categories.data.length} hasFilters={hasFilters} onReset={reset} label="danh mục" />
+                    <CollectionState
+                        isEmpty={!categories.data.length}
+                        hasFilters={hasFilters}
+                        onReset={reset}
+                        error={error}
+                        onRetry={retry}
+                        isLoading={isLoading}
+                        label="danh mục"
+                    />
                     <Pagination paginator={categories} routeUrl={route('categories.index')} query={query} />
                 </div>
             </div>
@@ -253,6 +262,7 @@ export default function CategoriesPage({
                         <DialogDescription>Danh mục cha-con không được tạo vòng lặp.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submit} className="flex flex-col gap-4">
+                        <FormErrorSummary errors={form.errors} />
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="category-name">Tên</Label>
@@ -260,9 +270,11 @@ export default function CategoriesPage({
                                     id="category-name"
                                     value={form.data.name}
                                     onChange={(event) => form.setData('name', event.target.value)}
+                                    aria-invalid={form.errors.name ? true : undefined}
+                                    aria-describedby={form.errors.name ? 'category-name-error' : undefined}
                                     required
                                 />
-                                {form.errors.name && <p className="text-destructive text-xs">{form.errors.name}</p>}
+                                <FieldError id="category-name-error" message={form.errors.name} />
                             </div>
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="category-code">Mã</Label>
@@ -270,9 +282,11 @@ export default function CategoriesPage({
                                     id="category-code"
                                     value={form.data.code}
                                     onChange={(event) => form.setData('code', event.target.value)}
+                                    aria-invalid={form.errors.code ? true : undefined}
+                                    aria-describedby={form.errors.code ? 'category-code-error' : undefined}
                                     placeholder="tu-hoa"
                                 />
-                                {form.errors.code && <p className="text-destructive text-xs">{form.errors.code}</p>}
+                                <FieldError id="category-code-error" message={form.errors.code} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -289,11 +303,7 @@ export default function CategoriesPage({
                                 aria-describedby="category-parent-error"
                                 clearable
                             />
-                            {form.errors.parent_id && (
-                                <p id="category-parent-error" className="text-destructive text-xs">
-                                    {form.errors.parent_id}
-                                </p>
-                            )}
+                            <FieldError id="category-parent-error" message={form.errors.parent_id} />
                         </div>
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="category-description">Mô tả</Label>
@@ -303,14 +313,14 @@ export default function CategoriesPage({
                                 onChange={(event) => form.setData('description', event.target.value)}
                             />
                         </div>
-                        <label className="flex items-center gap-2 text-sm">
-                            <input
-                                type="checkbox"
+                        <div className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                                id="category-is-active"
                                 checked={form.data.is_active}
-                                onChange={(event) => form.setData('is_active', event.target.checked)}
+                                onCheckedChange={(checked) => form.setData('is_active', checked === true)}
                             />
-                            Đang sử dụng
-                        </label>
+                            <Label htmlFor="category-is-active">Đang sử dụng</Label>
+                        </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                 Hủy

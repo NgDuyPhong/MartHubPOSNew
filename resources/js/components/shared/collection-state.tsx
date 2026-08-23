@@ -1,5 +1,5 @@
-import { AlertCircle, PackageOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertCircle, LoaderCircle, PackageOpen } from 'lucide-react';
 
 export function CollectionState({
     isEmpty,
@@ -7,6 +7,7 @@ export function CollectionState({
     onReset,
     onRetry,
     error,
+    isLoading = false,
     label = 'bản ghi',
 }: {
     isEmpty: boolean;
@@ -14,6 +15,7 @@ export function CollectionState({
     onReset?: () => void;
     onRetry?: () => void;
     error?: string | null;
+    isLoading?: boolean;
     label?: string;
 }) {
     if (error) {
@@ -29,6 +31,15 @@ export function CollectionState({
                         Thử lại
                     </Button>
                 )}
+            </div>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <div className="text-muted-foreground flex items-center justify-center gap-2 px-6 py-4 text-sm" role="status" aria-live="polite">
+                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                Đang cập nhật {label}…
             </div>
         );
     }

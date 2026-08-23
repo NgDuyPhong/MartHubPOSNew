@@ -35,7 +35,7 @@ export default function DeleteUser() {
         <div className="space-y-6">
             <HeadingSmall title="Xóa tài khoản" description="Xóa tài khoản và toàn bộ dữ liệu liên quan" />
             <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
+                <div className="text-destructive relative space-y-0.5">
                     <p className="font-medium">Cảnh báo</p>
                     <p className="text-sm">Vui lòng cân nhắc kỹ vì thao tác này không thể hoàn tác.</p>
                 </div>

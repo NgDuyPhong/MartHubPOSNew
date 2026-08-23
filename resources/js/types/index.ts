@@ -27,6 +27,7 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    organization?: { timezone: string };
     flash?: { success?: string; error?: string };
     ui?: { pagination?: { default: number; options: number[] } };
     features?: { legacyProductImportEnabled?: boolean };

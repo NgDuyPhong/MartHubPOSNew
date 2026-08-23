@@ -8,7 +8,7 @@ export type ProductUnit = {
 export type StockReceiptRow = {
     product_unit_id: number;
     quantity: number;
-    unit_cost: number;
+    unit_cost: number | '';
     lot_number: string;
     expiry_date: string;
 };

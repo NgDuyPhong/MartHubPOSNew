@@ -158,7 +158,7 @@ class ProductController extends Controller
                 'approvable_type' => Product::class,
                 'approvable_id' => $product->id,
                 'status' => 'approved',
-                'context' => ['source' => 'pos_quick_edit', 'before' => $before, 'after' => ['name' => $product->name, 'category_id' => $product->category_id, 'sale_price' => $productUnit->sale_price]],
+                'context' => ['source' => 'catalog_quick_edit', 'before' => $before, 'after' => ['name' => $product->name, 'category_id' => $product->category_id, 'sale_price' => $productUnit->sale_price]],
             ]);
             $this->resourceVersions->bumpAfterCommit($request->user(), ['catalog']);
         });

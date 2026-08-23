@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import { Pause, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -27,6 +28,7 @@ export function HeldCartsPanel({
     onHold: () => void;
     onDelete: (id: string) => void;
 }) {
+    const timezone = useOrganizationTimezone();
     const [open, setOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [names, setNames] = useState<Record<string, string>>({});
@@ -92,7 +94,8 @@ export function HeldCartsPanel({
                                 >
                                     <span className="block truncate font-medium">{draft.name}</span>
                                     <span className="text-muted-foreground text-xs">
-                                        {draft.cart.length} dòng · {formatMoney(draftTotal(draft))}đ · cập nhật {formatDateTime(draft.updatedAt)}
+                                        {draft.cart.length} dòng · {formatMoney(draftTotal(draft))}đ · cập nhật{' '}
+                                        {formatDateTime(draft.updatedAt, timezone)}
                                     </span>
                                 </button>
                                 <div className="flex min-w-[17rem] flex-1 items-center gap-2 sm:flex-none">

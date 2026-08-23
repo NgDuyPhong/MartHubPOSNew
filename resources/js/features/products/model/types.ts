@@ -4,7 +4,7 @@ export type UnitRow = {
     id?: number;
     unit_id: number;
     conversion_to_base: number;
-    sale_price: number;
+    sale_price: number | '';
     barcode: string;
     is_base: boolean;
     is_default_sale: boolean;

@@ -1,3 +1,4 @@
+import { FieldError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
@@ -5,6 +6,7 @@ import { AlertTriangle, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { CartReconciliation } from '../model/selectors';
 import type { CartLine } from '../model/types';
+import { PosMoneyInput } from './pos-money-input';
 
 export function CartTable({
     cart,
@@ -110,23 +112,23 @@ export function CartTable({
                                     <QuantityInput line={line} onUpdate={onUpdate} onRemove={onRemove} />
                                 </td>
                                 <td className="px-2">
-                                    <Input
+                                    <PosMoneyInput
                                         className="h-8 px-2 text-right"
-                                        type="number"
                                         value={line.unitPrice}
                                         aria-label={`Đơn giá ${line.product.name}`}
                                         disabled={!online}
-                                        onChange={(event) => onUpdate(line.key, { unitPrice: Math.max(0, Number(event.target.value)) })}
+                                        min={0}
+                                        onValueChange={(value) => onUpdate(line.key, { unitPrice: value })}
                                     />
                                 </td>
                                 <td className="px-2">
-                                    <Input
+                                    <PosMoneyInput
                                         className="h-8 px-2 text-right"
-                                        type="number"
                                         value={line.discount}
                                         aria-label={`Giảm giá ${line.product.name}`}
                                         disabled={!online}
-                                        onChange={(event) => onUpdate(line.key, { discount: Math.max(0, Number(event.target.value)) })}
+                                        min={0}
+                                        onValueChange={(value) => onUpdate(line.key, { discount: value })}
                                     />
                                 </td>
                                 <td className="px-3 text-right font-semibold">{formatMoney(line.unitPrice * line.quantity - line.discount)}đ</td>
@@ -225,11 +227,7 @@ function QuantityInput({
                     <Plus className="size-3" />
                 </Button>
             </div>
-            {error && (
-                <p id={`${line.key}-quantity-error`} className="text-destructive mt-1 text-[11px] leading-tight">
-                    {error}
-                </p>
-            )}
+            <FieldError id={`${line.key}-quantity-error`} message={error ?? undefined} className="mt-1 text-[11px] leading-tight" />
         </div>
     );
 }

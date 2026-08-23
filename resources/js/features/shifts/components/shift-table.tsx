@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import { ArrowDownToLine, LockKeyhole } from 'lucide-react';
 import type { Shift } from '../model/types';
@@ -15,10 +16,12 @@ export function ShiftTable({
     onClose: (id: number) => void;
     onReconcile: (id: number) => void;
 }) {
+    const timezone = useOrganizationTimezone();
+
     return (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
             <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
                     <tr>
                         <th className="px-4 py-3">Ca / quầy</th>
                         <th className="px-4 py-3">Mở lúc</th>
@@ -34,9 +37,9 @@ export function ShiftTable({
                         <tr key={shift.id} className="border-t">
                             <td className="px-4 py-3">
                                 <div className="font-semibold">{shift.code}</div>
-                                <div className="text-xs text-slate-500">{shift.register.name}</div>
+                                <div className="text-muted-foreground text-xs">{shift.register.name}</div>
                             </td>
-                            <td className="px-4">{formatDateTime(shift.opened_at)}</td>
+                            <td className="px-4">{formatDateTime(shift.opened_at, timezone)}</td>
                             <td className="px-4 text-right">{formatMoney(shift.opening_cash)}đ</td>
                             <td className="px-4 text-right">{shift.expected_cash == null ? '—' : `${formatMoney(shift.expected_cash)}đ`}</td>
                             <td className="px-4 text-right">
@@ -45,7 +48,7 @@ export function ShiftTable({
                                 ) : (
                                     <>
                                         <div>{formatMoney(shift.actual_cash)}đ</div>
-                                        <div className={Number(shift.difference_cash) === 0 ? 'text-emerald-600' : 'text-red-600'}>
+                                        <div className={Number(shift.difference_cash) === 0 ? 'text-success' : 'text-destructive'}>
                                             {Number(shift.difference_cash) > 0 ? '+' : ''}
                                             {formatMoney(shift.difference_cash ?? 0)}đ
                                         </div>
@@ -53,12 +56,8 @@ export function ShiftTable({
                                 )}
                             </td>
                             <td className="px-4">
-                                {shift.needs_reconciliation && <Badge className="bg-amber-100 text-amber-900">Cần đối soát</Badge>}
-                                {shift.status === 'open' ? (
-                                    <Badge className="bg-emerald-100 text-emerald-800">Đang mở</Badge>
-                                ) : (
-                                    <Badge variant="outline">Đã đóng</Badge>
-                                )}
+                                {shift.needs_reconciliation && <Badge variant="warning">Cần đối soát</Badge>}
+                                {shift.status === 'open' ? <Badge variant="success">Đang mở</Badge> : <Badge variant="outline">Đã đóng</Badge>}
                             </td>
                             <td className="px-4">
                                 <div className="flex justify-end gap-1">

@@ -8,6 +8,10 @@ use App\Models\Organization;
 use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\ProductVariant;
+use App\Models\Register;
+use App\Models\Sale;
+use App\Models\SaleItem;
+use App\Models\Shift;
 use App\Models\Unit;
 use App\Models\User;
 
@@ -68,6 +72,53 @@ test('product unit ids must be distinct', function () {
 test('catalog quick update is restricted and audited', function () {
     [$organization, , $owner] = catalogUser();
     [$product, $productUnit] = catalogProduct($organization->id);
+    $secondUnit = Unit::query()->create(['organization_id' => $organization->id, 'code' => 'BOX', 'name' => 'Hộp']);
+    $secondProductUnit = ProductUnit::query()->create([
+        'product_variant_id' => $productUnit->product_variant_id,
+        'unit_id' => $secondUnit->id,
+        'conversion_to_base' => 10,
+        'sale_price' => 70000,
+        'is_base' => false,
+        'is_default_sale' => false,
+        'is_active' => true,
+    ]);
+    $register = Register::query()->create(['branch_id' => $owner->branch_id, 'code' => 'POS-QUICK', 'name' => 'Quầy nhanh', 'is_active' => true]);
+    $shift = Shift::query()->create([
+        'register_id' => $register->id,
+        'opened_by' => $owner->id,
+        'code' => 'CA-QUICK',
+        'status' => 'open',
+        'opening_cash' => 0,
+        'opened_at' => now(),
+    ]);
+    $sale = Sale::query()->create([
+        'public_id' => Str::uuid()->toString(),
+        'branch_id' => $owner->branch_id,
+        'shift_id' => $shift->id,
+        'user_id' => $owner->id,
+        'invoice_number' => 'HD-QUICK',
+        'status' => 'completed',
+        'source' => 'online',
+        'subtotal' => 5000,
+        'total' => 5000,
+        'sold_at' => now(),
+    ]);
+    $saleItem = SaleItem::query()->create([
+        'sale_id' => $sale->id,
+        'product_variant_id' => $productUnit->product_variant_id,
+        'product_unit_id' => $productUnit->id,
+        'product_sku' => $product->sku,
+        'product_name' => $product->name,
+        'variant_name' => 'Mặc định',
+        'unit_code' => $productUnit->unit->code,
+        'unit_name' => $productUnit->unit->name,
+        'conversion_to_base' => 1,
+        'quantity' => 1,
+        'quantity_base' => 1,
+        'unit_price' => 5000,
+        'original_unit_price' => 5000,
+        'line_total' => 5000,
+    ]);
     $updatedAt = $product->updated_at->toISOString();
 
     $response = $this->actingAs($owner)->patch(route('products.quick-update', $product), [
@@ -81,7 +132,12 @@ test('catalog quick update is restricted and audited', function () {
     $response->assertRedirect();
     expect($product->refresh()->name)->toBe('Nước suối mới')
         ->and($productUnit->refresh()->sale_price)->toBe(6000)
-        ->and(ApprovalEvent::query()->where('action', 'catalog.quick_update')->count())->toBe(1);
+        ->and($secondProductUnit->refresh()->sale_price)->toBe(70000)
+        ->and($saleItem->refresh()->unit_price)->toBe(5000)
+        ->and(ApprovalEvent::query()->where('action', 'catalog.quick_update')->first()->requested_by)->toBe($owner->id)
+        ->and(ApprovalEvent::query()->where('action', 'catalog.quick_update')->first()->approved_by)->toBe($owner->id)
+        ->and(ApprovalEvent::query()->where('action', 'catalog.quick_update')->count())->toBe(1)
+        ->and(ApprovalEvent::query()->where('action', 'catalog.quick_update')->first()->context['source'])->toBe('catalog_quick_edit');
 
     [$organization2, , $cashier] = catalogUser('cashier');
     [$product2, $productUnit2] = catalogProduct($organization2->id);

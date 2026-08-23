@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
-import type { ListQuery, Paginated } from '@/types/pagination';
+import { NativeSelect } from '@/components/ui/native-select';
 import type { SharedData } from '@/types';
+import type { ListQuery, Paginated } from '@/types/pagination';
 import { Link, router, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -42,8 +43,8 @@ export function Pagination<T>({
                 </span>
                 <label className="flex items-center gap-2">
                     <span className="sr-only">Số dòng mỗi trang</span>
-                    <select
-                        className="bg-background h-9 rounded-md border px-2 text-sm"
+                    <NativeSelect
+                        className="h-9 w-auto px-2"
                         value={paginator.per_page}
                         onChange={(event) => changePerPage(Number(event.target.value))}
                         aria-label="Số dòng mỗi trang"
@@ -53,7 +54,7 @@ export function Pagination<T>({
                                 {size}/trang
                             </option>
                         ))}
-                    </select>
+                    </NativeSelect>
                 </label>
             </div>
             <div className="flex items-center justify-between gap-2 sm:justify-end">
@@ -77,7 +78,13 @@ export function Pagination<T>({
                         }
 
                         return link.url ? (
-                            <Button key={`${link.label}-${index}`} asChild size="sm" variant={link.active ? 'default' : 'outline'} className="min-w-9">
+                            <Button
+                                key={`${link.label}-${index}`}
+                                asChild
+                                size="sm"
+                                variant={link.active ? 'default' : 'outline'}
+                                className="min-w-9"
+                            >
                                 <Link href={link.url} preserveScroll preserveState aria-current={link.active ? 'page' : undefined}>
                                     {link.label}
                                 </Link>

@@ -99,7 +99,7 @@ export default function PosPage({
     const searchRef = useRef<HTMLInputElement>(null);
     const checkoutRef = useRef<HTMLDivElement>(null);
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
-    const openShiftForm = useForm({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
+    const openShiftForm = useForm<{ register_id: number; opening_cash: number | '' }>({ register_id: registers[0]?.id ?? 0, opening_cash: 0 });
     useEffect(() => {
         setCurrentCatalog(catalog);
         setCurrentCategories(categories);

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFocusReturn } from '@/hooks/use-focus-return';
 import { formatMoney } from '@/lib/format';
 import type { InertiaFormProps } from '@inertiajs/react';
 import type { CashCount } from '../model/types';
@@ -21,9 +22,22 @@ export function CloseShiftDialog({
     onSubmit: (event: React.FormEvent) => void;
     updateCount: (index: number, quantity: number) => void;
 }) {
+    const { captureFocus, restoreFocus } = useFocusReturn(open);
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) restoreFocus();
+        onOpenChange(nextOpen);
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent
+                className="max-w-2xl"
+                onOpenAutoFocus={() => captureFocus()}
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    restoreFocus();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>Kiểm đếm và chốt ca</DialogTitle>
                     <DialogDescription>Nhập số tờ theo mệnh giá; hệ thống tự cộng tiền thực tế và tính chênh lệch.</DialogDescription>
@@ -56,6 +70,9 @@ export function CloseShiftDialog({
                         />
                     </div>
                     <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={form.processing}>
+                            Hủy
+                        </Button>
                         <Button type="submit" disabled={form.processing}>
                             Xác nhận chốt ca
                         </Button>

@@ -1,3 +1,4 @@
+import { FieldError } from '@/components/shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { InertiaFormProps } from '@inertiajs/react';
@@ -77,8 +78,8 @@ export function ProductImageField({
                     onChange={(event) => form.setData('external_image_url', event.target.value)}
                 />
             )}
-            {form.errors.image && <p className="text-destructive text-xs">{form.errors.image}</p>}
-            {form.errors.external_image_url && <p className="text-destructive text-xs">{form.errors.external_image_url}</p>}
+            <FieldError message={form.errors.image} />
+            <FieldError message={form.errors.external_image_url} />
             <div className="bg-muted/50 flex min-h-28 items-center justify-center rounded-md border p-3">
                 {previewUrl && !previewFailed ? (
                     <img

@@ -1,3 +1,4 @@
+import { FieldError, FormErrorSummary } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -32,9 +33,12 @@ export function ReconcileShiftDialog({
                             value={form.data.reconciliation_note}
                             onChange={(event) => form.setData('reconciliation_note', event.target.value)}
                             placeholder="Ví dụ: đã kiểm tra giao dịch offline…"
+                            aria-invalid={form.errors.reconciliation_note ? true : undefined}
+                            aria-describedby={form.errors.reconciliation_note ? 'reconciliation-note-error' : undefined}
                         />
-                        {form.errors.reconciliation_note && <p className="text-destructive text-xs">{form.errors.reconciliation_note}</p>}
+                        <FieldError id="reconciliation-note-error" message={form.errors.reconciliation_note} />
                     </div>
+                    <FormErrorSummary errors={form.errors} />
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Hủy

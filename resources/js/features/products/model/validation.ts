@@ -4,7 +4,7 @@ export function normalizeUnitRows(rows: UnitRow[]): UnitRow[] {
     return rows.map((row) => ({
         ...row,
         conversion_to_base: row.is_base ? 1 : Math.max(0.000001, Number(row.conversion_to_base)),
-        sale_price: Math.max(0, Number(row.sale_price)),
+        sale_price: row.sale_price === '' ? '' : Math.max(0, Number(row.sale_price)),
     }));
 }
 

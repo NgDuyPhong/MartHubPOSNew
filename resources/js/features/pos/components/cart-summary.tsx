@@ -1,4 +1,6 @@
+import { FieldError, FormErrorSummary } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatMoney } from '@/lib/format';
@@ -7,6 +9,7 @@ import { Banknote, QrCode, UserRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Customer } from '../model/types';
 import type { CheckoutErrors } from '../model/validation';
+import { PosMoneyInput } from './pos-money-input';
 
 export function CartSummary({
     checkoutRef,
@@ -106,11 +109,7 @@ export function CartSummary({
                     <div className="text-primary text-2xl font-bold">{formatMoney(total)}đ</div>
                 </div>
             </div>
-            {hasValidationErrors && (
-                <div className="text-destructive border-destructive/30 bg-destructive/10 mb-3 rounded-md border px-3 py-2 text-sm" role="alert">
-                    {Object.values(errors)[0]}
-                </div>
-            )}
+            {hasValidationErrors && <FormErrorSummary errors={errors} />}
             {!expanded ? (
                 <Button
                     className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-full text-base"
@@ -146,13 +145,14 @@ export function CartSummary({
                                     <Banknote className="size-4" />
                                     Tiền mặt khách đưa
                                 </Label>
-                                <Input
+                                <PosMoneyInput
                                     id="pos-cash-amount"
                                     autoFocus
-                                    type="number"
-                                    min="0"
+                                    min={0}
                                     value={cash}
-                                    onChange={(event) => onCashChange(Number(event.target.value))}
+                                    onValueChange={onCashChange}
+                                    invalid={Boolean(errors.cash)}
+                                    aria-describedby={errors.cash ? 'pos-cash-error' : undefined}
                                 />
                                 {cashSuggestions.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-1" aria-label="Mệnh giá tiền mặt nhanh">
@@ -163,32 +163,32 @@ export function CartSummary({
                                         ))}
                                     </div>
                                 )}
-                                {errors.cash && <p className="text-destructive mt-1 text-xs">{errors.cash}</p>}
+                                <FieldError id="pos-cash-error" message={errors.cash} />
                             </div>
                             <div>
                                 <Label htmlFor="pos-qr-amount" className="flex items-center gap-2">
                                     <QrCode className="size-4" />
                                     Chuyển khoản / QR
                                 </Label>
-                                <Input
+                                <PosMoneyInput
                                     id="pos-qr-amount"
-                                    type="number"
-                                    min="0"
+                                    min={0}
                                     value={qr}
-                                    onChange={(event) => onQrChange(Number(event.target.value))}
+                                    onValueChange={onQrChange}
+                                    invalid={Boolean(errors.qr)}
+                                    aria-describedby={errors.qr ? 'pos-qr-error' : undefined}
                                 />
-                                {errors.qr && <p className="text-destructive mt-1 text-xs">{errors.qr}</p>}
+                                <FieldError id="pos-qr-error" message={errors.qr} />
                             </div>
                             {qr > 0 && (
-                                <label className="bg-warning-muted text-warning-foreground border-warning/40 flex items-start gap-2 rounded-md border p-3 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        className="mt-1"
+                                <div className="bg-warning-muted text-warning-foreground border-warning/40 flex items-start gap-2 rounded-md border p-3 text-sm">
+                                    <Checkbox
+                                        id="pos-qr-confirmed"
                                         checked={qrConfirmed}
-                                        onChange={(event) => onQrConfirm(event.target.checked)}
+                                        onCheckedChange={(checked) => onQrConfirm(checked === true)}
                                     />
-                                    Tôi đã kiểm tra thủ công và thấy tiền vào tài khoản ngân hàng.
-                                </label>
+                                    <Label htmlFor="pos-qr-confirmed">Tôi đã kiểm tra thủ công và thấy tiền vào tài khoản ngân hàng.</Label>
+                                </div>
                             )}
                         </div>
                         <div className="bg-muted space-y-3 rounded-md p-3">
@@ -216,6 +216,8 @@ export function CartSummary({
                                         role="combobox"
                                         aria-expanded={customerPickerOpen}
                                         aria-controls="pos-customer-options"
+                                        aria-invalid={errors.customerId ? true : undefined}
+                                        aria-describedby={errors.customerId ? 'pos-customer-error' : undefined}
                                         value={
                                             selectedCustomer
                                                 ? `${selectedCustomer.name}${selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}`
@@ -269,7 +271,7 @@ export function CartSummary({
                                         </div>
                                     )}
                                 </div>
-                                {errors.customerId && <p className="text-destructive mt-1 text-xs">{errors.customerId}</p>}
+                                <FieldError id="pos-customer-error" message={errors.customerId} />
                             </div>
                             {overrideNeeded && (
                                 <div>

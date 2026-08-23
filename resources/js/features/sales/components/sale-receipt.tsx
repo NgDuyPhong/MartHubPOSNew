@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import type { SaleItem } from '../model/types';
 
@@ -7,18 +8,22 @@ export function SaleReceipt({
 }: {
     sale: { sold_at: string; source: string; subtotal: number; discount_amount: number; total: number; debt_amount: number; items: SaleItem[] };
 }) {
+    const timezone = useOrganizationTimezone();
+
     return (
-        <div data-receipt className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div data-receipt className="bg-card overflow-hidden rounded-lg border shadow-sm print:bg-white print:text-black">
             <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
                     <div className="font-bold">MART HUB MINI MART</div>
-                    <div className="text-xs text-slate-500">Hóa đơn snapshot · {formatDateTime(sale.sold_at)}</div>
+                    <div className="text-muted-foreground text-xs print:text-slate-500">
+                        Hóa đơn snapshot · {formatDateTime(sale.sold_at, timezone)}
+                    </div>
                 </div>
                 <Badge variant="outline">{sale.source === 'offline_sync' ? 'Offline đã đồng bộ' : 'Online'}</Badge>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                    <thead className="bg-muted text-muted-foreground text-left text-xs uppercase print:bg-white print:text-slate-500">
                         <tr>
                             <th className="px-4 py-3">Sản phẩm</th>
                             <th className="px-4 py-3">Đơn vị</th>
@@ -33,7 +38,7 @@ export function SaleReceipt({
                             <tr key={item.id} className="border-t">
                                 <td className="px-4 py-3">
                                     <div className="font-semibold">{item.product_name}</div>
-                                    <div className="text-xs text-slate-500">
+                                    <div className="text-muted-foreground text-xs print:text-slate-500">
                                         {item.product_sku}
                                         {item.variant_name ? ` · ${item.variant_name}` : ''}
                                         {item.price_overridden ? ' · Đã sửa giá (có duyệt)' : ''}
@@ -44,7 +49,7 @@ export function SaleReceipt({
                                 </td>
                                 <td className="px-4 text-right">{Number(item.quantity)}</td>
                                 <td className="px-4 text-right">{formatMoney(item.unit_price)}đ</td>
-                                <td className="px-4 text-right text-orange-600">{formatMoney(item.discount_amount)}đ</td>
+                                <td className="text-warning px-4 text-right">{formatMoney(item.discount_amount)}đ</td>
                                 <td className="px-4 text-right font-bold">{formatMoney(item.line_total)}đ</td>
                             </tr>
                         ))}
@@ -64,7 +69,7 @@ export function SaleReceipt({
                     <span>Tổng cộng</span>
                     <span>{formatMoney(sale.total)}đ</span>
                 </div>
-                <div className="flex justify-between text-red-600">
+                <div className="text-destructive flex justify-between">
                     <span>Còn nợ</span>
                     <span>{formatMoney(sale.debt_amount)}đ</span>
                 </div>

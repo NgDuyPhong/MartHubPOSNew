@@ -47,6 +47,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'capabilities' => fn () => $request->user()?->capabilities() ?? [],
             ],
+            'organization' => [
+                'timezone' => fn () => $request->user()?->organization?->timezone ?? config('app.timezone'),
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

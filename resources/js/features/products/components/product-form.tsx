@@ -1,4 +1,6 @@
+import { FieldError, FormErrorSummary } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -51,11 +53,7 @@ export function ProductForm({
 
     return (
         <form onSubmit={submit} className="flex flex-col gap-6 pb-24">
-            {Object.keys(form.errors).length > 0 && (
-                <div role="alert" className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-3 text-sm">
-                    Có lỗi cần kiểm tra lại biểu mẫu.
-                </div>
-            )}
+            <FormErrorSummary errors={form.errors} />
             <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 md:p-6">
                 <div>
                     <h2 className="text-lg font-semibold">Thông tin cơ bản</h2>
@@ -64,13 +62,27 @@ export function ProductForm({
                 <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="product-name">Tên sản phẩm</Label>
-                        <Input id="product-name" value={form.data.name} onChange={(event) => form.setData('name', event.target.value)} required />
-                        {form.errors.name && <p className="text-destructive text-xs">{form.errors.name}</p>}
+                        <Input
+                            id="product-name"
+                            value={form.data.name}
+                            onChange={(event) => form.setData('name', event.target.value)}
+                            aria-invalid={form.errors.name ? true : undefined}
+                            aria-describedby={form.errors.name ? 'product-name-error' : undefined}
+                            required
+                        />
+                        <FieldError id="product-name-error" message={form.errors.name} />
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="product-sku">SKU</Label>
                         <div className="flex gap-2">
-                            <Input id="product-sku" value={form.data.sku} onChange={(event) => form.setData('sku', event.target.value)} required />
+                            <Input
+                                id="product-sku"
+                                value={form.data.sku}
+                                onChange={(event) => form.setData('sku', event.target.value)}
+                                aria-invalid={form.errors.sku ? true : undefined}
+                                aria-describedby={form.errors.sku ? 'product-sku-error' : undefined}
+                                required
+                            />
                             {!product && (
                                 <Button type="button" variant="outline" onClick={() => form.setData('sku', generateProductSku())}>
                                     Tạo lại
@@ -78,7 +90,7 @@ export function ProductForm({
                             )}
                         </div>
                         {!product && <p className="text-muted-foreground text-xs">SKU được tạo sẵn; bạn vẫn có thể chỉnh sửa.</p>}
-                        {form.errors.sku && <p className="text-destructive text-xs">{form.errors.sku}</p>}
+                        <FieldError id="product-sku-error" message={form.errors.sku} />
                     </div>
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="product-category">Danh mục</Label>
@@ -95,34 +107,9 @@ export function ProductForm({
                             aria-describedby={form.errors.category_id ? 'product-category-error' : undefined}
                             clearable
                         />
-                        {form.errors.category_id && (
-                            <p id="product-category-error" className="text-destructive text-xs">
-                                {form.errors.category_id}
-                            </p>
-                        )}
+                        <FieldError id="product-category-error" message={form.errors.category_id} />
                     </div>
                 </div>
-            </section>
-            <section className="bg-card rounded-lg border p-4 md:p-6">
-                <ProductImageField form={form} currentUrl={product?.image_url} productName={form.data.name} />
-            </section>
-            <section className="bg-card flex flex-wrap gap-4 rounded-lg border p-4 md:p-6">
-                <label className="flex min-h-10 items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.data.track_lot} onChange={(event) => form.setData('track_lot', event.target.checked)} />
-                    Theo dõi lô
-                </label>
-                <label className="flex min-h-10 items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        checked={form.data.track_expiry}
-                        onChange={(event) => form.setData('track_expiry', event.target.checked)}
-                    />
-                    Theo dõi hạn sử dụng
-                </label>
-                <label className="flex min-h-10 items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.data.is_active} onChange={(event) => form.setData('is_active', event.target.checked)} />
-                    Đang bán
-                </label>
             </section>
             <section className="bg-card rounded-lg border p-4 md:p-6">
                 <ProductUnitsEditor
@@ -132,6 +119,42 @@ export function ProductForm({
                     updateUnit={updateUnit}
                     chooseExclusive={chooseExclusive}
                 />
+            </section>
+            <section className="bg-card rounded-lg border p-4 md:p-6">
+                <ProductImageField form={form} currentUrl={product?.image_url} productName={form.data.name} />
+            </section>
+            <section className="bg-card flex flex-col gap-3 rounded-lg border p-4 md:p-6">
+                <div>
+                    <h2 className="text-lg font-semibold">Theo dõi kho và trạng thái</h2>
+                    <p className="text-muted-foreground mt-1 text-sm">Thiết lập cách quản lý lô, hạn sử dụng và khả năng bán sản phẩm.</p>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                    <div className="flex min-h-10 items-center gap-2 text-sm">
+                        <Checkbox
+                            id="product-track-lot"
+                            checked={form.data.track_lot}
+                            onCheckedChange={(checked) => form.setData('track_lot', checked === true)}
+                        />
+                        <Label htmlFor="product-track-lot">Theo dõi lô</Label>
+                    </div>
+                    <div className="flex min-h-10 items-center gap-2 text-sm">
+                        <Checkbox
+                            id="product-track-expiry"
+                            checked={form.data.track_expiry}
+                            onCheckedChange={(checked) => form.setData('track_expiry', checked === true)}
+                        />
+                        <Label htmlFor="product-track-expiry">Theo dõi hạn sử dụng</Label>
+                    </div>
+                    <div className="flex min-h-10 items-center gap-2 text-sm">
+                        <Checkbox
+                            id="product-is-active"
+                            checked={form.data.is_active}
+                            onCheckedChange={(checked) => form.setData('is_active', checked === true)}
+                        />
+                        <Label htmlFor="product-is-active">Đang bán</Label>
+                    </div>
+                </div>
+                <FieldError message={form.errors.is_active} />
             </section>
             <div className="bg-background/95 fixed right-0 bottom-0 left-0 z-20 flex justify-end gap-2 border-t p-3 backdrop-blur md:pr-6">
                 <Button type="button" variant="outline" onClick={onCancel}>

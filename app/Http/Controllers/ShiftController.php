@@ -7,32 +7,34 @@ use App\Actions\Shifts\OpenShiftAction;
 use App\Actions\Shifts\ReconcileShiftAction;
 use App\Actions\Shifts\RecordShiftCashMovementAction;
 use App\Http\Requests\CloseShiftRequest;
+use App\Http\Requests\IndexShiftsRequest;
 use App\Http\Requests\OpenShiftRequest;
 use App\Http\Requests\ReconcileShiftRequest;
 use App\Http\Requests\StoreShiftCashMovementRequest;
 use App\Models\Register;
 use App\Models\Shift;
+use App\Support\OrganizationDateRange;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ShiftController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(IndexShiftsRequest $request): Response
     {
         $search = trim((string) $request->string('search'));
         $status = $request->string('status')->toString() ?: 'all';
-        $from = preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $request->string('from')->toString()) ? $request->string('from')->toString() : null;
-        $to = preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $request->string('to')->toString()) ? $request->string('to')->toString() : null;
+        $from = $request->validated('from');
+        $to = $request->validated('to');
+        $dateRange = OrganizationDateRange::fromLocalDates($from, $to, $request->user()->organization?->timezone ?? config('app.timezone'));
         $perPage = in_array($request->integer('per_page'), config('ux.pagination.options'), true) ? $request->integer('per_page') : config('ux.pagination.default');
 
         return Inertia::render('shifts/index', [
             'shifts' => Shift::query()->whereHas('register', fn ($query) => $query->where('branch_id', $request->user()->branch_id))->with('register:id,name')
                 ->when($search !== '', fn ($query) => $query->where(fn ($searchQuery) => $searchQuery->where('code', 'like', "%{$search}%")->orWhereHas('register', fn ($registerQuery) => $registerQuery->where('name', 'like', "%{$search}%"))))
                 ->when(in_array($status, ['open', 'closed'], true), fn ($query) => $query->where('status', $status))
-                ->when($from, fn ($query) => $query->whereDate('opened_at', '>=', $from))
-                ->when($to, fn ($query) => $query->whereDate('opened_at', '<=', $to))
+                ->when($dateRange->fromUtc, fn ($query, $fromUtc) => $query->where('opened_at', '>=', $fromUtc))
+                ->when($dateRange->toExclusiveUtc, fn ($query, $toExclusiveUtc) => $query->where('opened_at', '<', $toExclusiveUtc))
                 ->latest('opened_at')->paginate($perPage)->withQueryString(),
             'registers' => Register::query()->where('branch_id', $request->user()->branch_id)->where('is_active', true)->get(['id', 'name']),
             'filters' => ['search' => $search, 'status' => $status, 'from' => $from, 'to' => $to, 'per_page' => $perPage],

@@ -1,3 +1,4 @@
+import { FormErrorSummary } from '@/components/shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { InertiaFormProps } from '@inertiajs/react';
@@ -38,7 +39,7 @@ export function StockReceiptForm({
                 </div>
             </div>
             <StockReceiptItemsTable form={form} productUnits={productUnits} updateRow={updateRow} addRow={addRow} removeRow={removeRow} />
-            {Object.keys(form.errors).length > 0 && <p className="text-destructive text-sm">Dữ liệu chưa hợp lệ. Vui lòng kiểm tra các dòng nhập.</p>}
+            <FormErrorSummary errors={form.errors} />
         </form>
     );
 }

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ReturnDialog, SaleReceipt, nonEmptyReturnItems, type ReturnFormData, type SaleItem } from '@/features/sales';
+import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime } from '@/lib/format';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -24,6 +25,7 @@ type Sale = {
 };
 
 export default function SaleShow({ sale, activeShift }: { sale: Sale; activeShift: { id: number; code: string } | null }) {
+    const timezone = useOrganizationTimezone();
     const [returnOpen, setReturnOpen] = useState(false);
     const form = useForm<ReturnFormData>({
         shift_id: activeShift?.id ?? 0,
@@ -57,7 +59,7 @@ export default function SaleShow({ sale, activeShift }: { sale: Sale; activeShif
                         <div>
                             <h1 className="text-2xl font-semibold">{sale.invoice_number}</h1>
                             <p className="text-muted-foreground text-sm">
-                                {formatDateTime(sale.sold_at)} · {sale.customer?.name ?? 'Khách lẻ'}
+                                {formatDateTime(sale.sold_at, timezone)} · {sale.customer?.name ?? 'Khách lẻ'}
                             </p>
                         </div>
                     </div>

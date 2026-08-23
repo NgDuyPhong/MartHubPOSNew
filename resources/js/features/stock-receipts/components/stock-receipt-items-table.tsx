@@ -1,3 +1,4 @@
+import { FieldError, MoneyInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -19,11 +20,13 @@ export function StockReceiptItemsTable({
     addRow: () => void;
     removeRow: (index: number) => void;
 }) {
+    const fieldErrors = form.errors as Record<string, string | undefined>;
+
     return (
         <>
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px] text-sm">
-                    <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+                    <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
                         <tr>
                             <th className="p-2">Sản phẩm / quy cách</th>
                             <th className="p-2">Số lượng</th>
@@ -53,12 +56,17 @@ export function StockReceiptItemsTable({
                                     />
                                 </td>
                                 <td className="p-2">
-                                    <Input
-                                        type="number"
-                                        min="0"
+                                    <MoneyInput
+                                        id={`stock-unit-cost-${index}`}
+                                        min={0}
+                                        required
                                         value={row.unit_cost}
-                                        onChange={(event) => updateRow(index, { unit_cost: Number(event.target.value) })}
+                                        aria-label={`Giá nhập / đơn vị, dòng ${index + 1}`}
+                                        invalid={Boolean(fieldErrors[`items.${index}.unit_cost`])}
+                                        aria-describedby={fieldErrors[`items.${index}.unit_cost`] ? `stock-unit-cost-${index}-error` : undefined}
+                                        onValueChange={(value) => updateRow(index, { unit_cost: value })}
                                     />
+                                    <FieldError id={`stock-unit-cost-${index}-error`} message={fieldErrors[`items.${index}.unit_cost`]} />
                                 </td>
                                 <td className="p-2">
                                     <Input value={row.lot_number} onChange={(event) => updateRow(index, { lot_number: event.target.value })} />
@@ -77,6 +85,7 @@ export function StockReceiptItemsTable({
                                         size="icon"
                                         disabled={form.data.items.length === 1}
                                         onClick={() => removeRow(index)}
+                                        aria-label={`Xóa dòng nhập kho ${index + 1}`}
                                     >
                                         <Trash2 className="size-4" />
                                     </Button>

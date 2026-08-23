@@ -9,7 +9,11 @@ export function FlashMessages() {
     const { props } = usePage<SharedData>();
     const flash = props.flash;
     const [dismissed, setDismissed] = useState<string | null>(null);
-    const message = flash?.error ? { text: flash.error, tone: 'error' as const } : flash?.success ? { text: flash.success, tone: 'success' as const } : null;
+    const message = flash?.error
+        ? { text: flash.error, tone: 'error' as const }
+        : flash?.success
+          ? { text: flash.success, tone: 'success' as const }
+          : null;
 
     useEffect(() => {
         setDismissed(null);
@@ -23,7 +27,14 @@ export function FlashMessages() {
                 {message.tone === 'success' && <CheckCircle2 className="size-4" />}
                 <AlertDescription className="flex items-center justify-between gap-3">
                     <span>{message.text}</span>
-                    <Button type="button" size="icon" variant="ghost" className="size-7 shrink-0" onClick={() => setDismissed(message.text)} aria-label="Đóng thông báo">
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 shrink-0"
+                        onClick={() => setDismissed(message.text)}
+                        aria-label="Đóng thông báo"
+                    >
                         <X className="size-4" />
                     </Button>
                 </AlertDescription>
