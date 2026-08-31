@@ -33,4 +33,10 @@ describe('Button', () => {
 
         expect(screen.getByRole('link', { name: 'Sản phẩm' })).toHaveAttribute('href', '/products');
     });
+
+    it.each(['outline', 'ghost'] as const)('sets an explicit foreground for the %s variant', (variant) => {
+        render(<Button variant={variant}>Action</Button>);
+
+        expect(screen.getByRole('button', { name: 'Action' })).toHaveClass('text-foreground');
+    });
 });

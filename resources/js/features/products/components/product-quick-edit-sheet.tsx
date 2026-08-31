@@ -109,7 +109,7 @@ export function ProductQuickEditSheet({
                 <form onSubmit={submit} className="flex flex-col gap-5 px-6 py-4">
                     <FormErrorSummary errors={form.errors} />
                     {!online && (
-                        <p className="border-warning/40 bg-warning-muted text-warning-foreground rounded-md border p-3 text-sm">
+                        <p className="border-warning/40 bg-warning-muted text-warning-muted-foreground rounded-md border p-3 text-sm">
                             Cần kết nối mạng để sửa dữ liệu sản phẩm.
                         </p>
                     )}

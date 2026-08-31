@@ -56,7 +56,10 @@ export function OpenShiftDialog({
                     <DialogDescription>Cần ghi nhận tiền đầu ca trước khi phát sinh hóa đơn.</DialogDescription>
                 </DialogHeader>
                 {required && (
-                    <div className="bg-warning-muted text-warning-foreground border-warning/40 rounded-md border px-3 py-2 text-sm" role="status">
+                    <div
+                        className="bg-warning-muted text-warning-muted-foreground border-warning/40 rounded-md border px-3 py-2 text-sm"
+                        role="status"
+                    >
                         POS đang khóa bán vì chưa có ca mở. Bạn có thể mở ca ngay hoặc đi tới màn hình quản lý ca.
                         <Link href={route('shifts.index')} className="text-primary mt-1 block font-medium underline underline-offset-2">
                             Mở màn hình ca

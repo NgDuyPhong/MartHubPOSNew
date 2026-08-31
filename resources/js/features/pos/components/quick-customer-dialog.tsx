@@ -84,7 +84,7 @@ export function QuickCustomerDialog({
                         />
                     </div>
                     {!online && (
-                        <p className="bg-warning-muted text-warning-foreground border-warning/40 rounded-md border px-3 py-2 text-sm">
+                        <p className="bg-warning-muted text-warning-muted-foreground border-warning/40 rounded-md border px-3 py-2 text-sm">
                             Đang offline: hãy chọn khách hàng đã có hoặc tạo lại khi có mạng.
                         </p>
                     )}

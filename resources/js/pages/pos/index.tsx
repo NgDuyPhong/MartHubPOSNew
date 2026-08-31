@@ -8,15 +8,16 @@ import {
     getLastReceipt,
     getPosFreshness,
     getPosSnapshot,
+    POS_NOTICE_DURATIONS,
     reconcileCartWithCatalog,
     saveLastReceipt,
     useCatalogSearch,
     useConnectivity,
     usePosCarts,
     usePosCheckout,
+    usePosNoticeState,
     usePosResourceRefresh,
     usePosShortcuts,
-    type CartLine,
     type CategoryOption,
     type CheckoutDraftSnapshot,
     type Customer,
@@ -89,7 +90,6 @@ export default function PosPage({
     const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
     const [storedReceipt, setStoredReceipt] = useState<SaleReceipt | null>(latestReceipt);
     const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
     const [customerOptions, setCustomerOptions] = useState<Customer[]>(customers);
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
     const [openShiftOpen, setOpenShiftOpen] = useState(!activeShift);
@@ -98,7 +98,7 @@ export default function PosPage({
     const [pickerContext, setPickerContext] = useState<PickerContext>(null);
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
     const [syncCenterOpen, setSyncCenterOpen] = useState(false);
-    const [undoCart, setUndoCart] = useState<CartLine[]>([]);
+    const resourceRefreshErrorIdRef = useRef<string | null>(null);
     const searchRef = useRef<HTMLInputElement>(null);
     const checkoutRef = useRef<HTMLDivElement>(null);
     const confirmCheckoutRef = useRef<HTMLButtonElement>(null);
@@ -145,7 +145,8 @@ export default function PosPage({
         [cartReconciliation],
     );
     const { index: catalogSearchIndex, products, isSearchPending } = useCatalogSearch(currentCatalog, query, categoryId);
-    const onSync = useCallback((synced: number) => setMessage(`Đã đồng bộ ${synced} hóa đơn offline.`), []);
+    const { message, messageRef, undoCart, setUndoCart, setPosMessage, showNotice } = usePosNoticeState();
+    const onSync = useCallback((synced: number) => showNotice(`Đã đồng bộ ${synced} hóa đơn offline.`, 'success'), [showNotice]);
     const applyPosSnapshot = useCallback((snapshot: Awaited<ReturnType<typeof getPosSnapshot>>) => {
         if (snapshot.catalog) setCurrentCatalog(snapshot.catalog);
         if (snapshot.categories) setCurrentCategories(snapshot.categories);
@@ -180,7 +181,10 @@ export default function PosPage({
 
         return snapshot.catalog ?? currentCatalog;
     }, [currentCatalog, refreshPosResources]);
-    const onCacheError = useCallback(() => setMessage('Không thể lưu snapshot catalog offline; dữ liệu trong phiên bán vẫn được giữ nguyên.'), []);
+    const onCacheError = useCallback(
+        () => showNotice('Không thể lưu snapshot catalog offline; dữ liệu trong phiên bán vẫn được giữ nguyên.', 'warning'),
+        [showNotice],
+    );
     const ensureCheckoutDataFresh = useCallback(
         async (selectedCustomerId: number | null) => {
             const freshness = await getPosFreshness(currentVersions);
@@ -223,10 +227,14 @@ export default function PosPage({
         onRefreshCatalog: refreshCatalogForReprice,
         onCacheError,
     });
-    const onResourceRefreshError = useCallback(() => setMessage(posResourceRefreshErrorMessage), []);
+    const onResourceRefreshError = useCallback(() => {
+        const notice = showNotice(posResourceRefreshErrorMessage, 'warning');
+        resourceRefreshErrorIdRef.current = notice.id;
+    }, [showNotice]);
     const onResourceRefreshRecovered = useCallback(() => {
-        setMessage((current) => (current === posResourceRefreshErrorMessage ? null : current));
-    }, []);
+        if (messageRef.current?.id === resourceRefreshErrorIdRef.current) setPosMessage(null);
+        resourceRefreshErrorIdRef.current = null;
+    }, [messageRef, setPosMessage]);
     usePosResourceRefresh({
         versions: currentVersions,
         online,
@@ -239,16 +247,16 @@ export default function PosPage({
         async (idempotencyKey: string) => {
             try {
                 const result = await reprice(idempotencyKey);
-                setMessage(
-                    result === 'repriced'
-                        ? 'Đã cập nhật giá hiện tại cho hóa đơn. Hãy kiểm tra lại rồi bấm Đồng bộ ngay.'
-                        : 'Không thể tự cập nhật giá cho conflict này; hãy xuất recovery JSON để xử lý thủ công.',
-                );
+                if (result === 'repriced') {
+                    showNotice('Đã cập nhật giá hiện tại cho hóa đơn. Hãy kiểm tra lại rồi bấm Đồng bộ ngay.', 'success');
+                } else {
+                    showNotice('Không thể tự cập nhật giá cho conflict này; hãy xuất recovery JSON để xử lý thủ công.', 'error');
+                }
             } catch {
-                setMessage('Không thể tải catalog hiện tại. Hãy kiểm tra kết nối rồi thử lại.');
+                showNotice('Không thể tải catalog hiện tại. Hãy kiểm tra kết nối rồi thử lại.', 'error');
             }
         },
-        [reprice],
+        [reprice, showNotice],
     );
     useEffect(() => {
         void getLastReceipt(scopeKey)
@@ -286,14 +294,14 @@ export default function PosPage({
         setUndoCart(cart);
         clearCart();
         setClearDialogOpen(false);
-        setMessage('Đã xóa hóa đơn hiện tại.');
-    }, [cart, clearCart]);
+        showNotice('Đã xóa hóa đơn hiện tại.', 'info', { autoDismissMs: POS_NOTICE_DURATIONS.cartUndo, kind: 'cart-cleared' });
+    }, [cart, clearCart, setUndoCart, showNotice]);
     const undoClearCart = useCallback(() => {
         if (!undoCart.length) return;
         replaceCart(undoCart);
         setUndoCart([]);
-        setMessage(null);
-    }, [replaceCart, undoCart]);
+        setPosMessage(null);
+    }, [replaceCart, setPosMessage, setUndoCart, undoCart]);
     const handleSaleSuccess = useCallback(
         (saleReceipt: SaleReceipt) => {
             setReceipt(saleReceipt);
@@ -317,7 +325,7 @@ export default function PosPage({
         unavailableCartLineCount,
         clearCart,
         refreshPending,
-        onMessage: setMessage,
+        onMessage: setPosMessage,
         onSuccess: handleSaleSuccess,
         ensureFresh: ensureCheckoutDataFresh,
         refreshAfterSale,
@@ -329,9 +337,9 @@ export default function PosPage({
                 [...current.filter((item) => item.id !== customer.id), customer].sort((left, right) => left.name.localeCompare(right.name)),
             );
             checkout.setCustomerId(customer.id);
-            setMessage(`Đã tạo và chọn khách hàng ${customer.name}.`);
+            showNotice(`Đã tạo và chọn khách hàng ${customer.name}.`, 'success');
         },
-        [checkout, setMessage],
+        [checkout, showNotice],
     );
     const checkoutSnapshot = useMemo<CheckoutDraftSnapshot>(
         () => ({ customerId: checkout.customerId, cash: checkout.cash, qr: checkout.qr, qrConfirmed: checkout.qrConfirmed }),
@@ -465,7 +473,7 @@ export default function PosPage({
                     hasStaleCartPrice={hasStaleCartPrice}
                     unavailableCartLineCount={unavailableCartLineCount}
                     onUndo={undoClearCart}
-                    onDismiss={() => setMessage(null)}
+                    onDismiss={() => setPosMessage(null)}
                 />
                 <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-5">
                     <CatalogPanel
@@ -569,7 +577,7 @@ export default function PosPage({
                             setReceiptPreviewOpen(false);
                             changeLineSelection(source.key, product, variant, unit);
                             if (hadPricingOverride) {
-                                setMessage('Đã đổi quy cách; giá và giảm giá của dòng cũ đã được đặt lại.');
+                                showNotice('Đã đổi quy cách; giá và giảm giá của dòng cũ đã được đặt lại.', 'info');
                             }
                         }
                         closePicker();

@@ -19,8 +19,12 @@ export { useConnectivity } from './hooks/use-connectivity';
 export { usePosCart } from './hooks/use-pos-cart';
 export { usePosCarts } from './hooks/use-pos-carts';
 export { usePosCheckout } from './hooks/use-pos-checkout';
+export { usePosNoticeState } from './hooks/use-pos-notice';
+export type { PosNoticeOptions } from './hooks/use-pos-notice';
 export { usePosResourceRefresh } from './hooks/use-pos-resource-refresh';
 export { usePosShortcuts } from './hooks/use-pos-shortcuts';
+export { POS_NOTICE_DURATIONS, createPosNotice } from './model/notices';
+export type { PosNotice, PosNoticeKind, PosNoticeTone } from './model/notices';
 export {
     buildCatalogSearchIndex,
     calculateCartTotals,

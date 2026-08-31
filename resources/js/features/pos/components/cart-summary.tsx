@@ -102,7 +102,7 @@ export function CartSummary({
                 </div>
                 <div>
                     <span className="text-muted-foreground">Giảm giá</span>
-                    <div className="text-warning font-semibold">-{formatMoney(discount)}đ</div>
+                    <div className="text-warning-text font-semibold">-{formatMoney(discount)}đ</div>
                 </div>
                 <div className="text-right">
                     <span className="text-muted-foreground">Phải thu</span>
@@ -181,7 +181,7 @@ export function CartSummary({
                                 <FieldError id="pos-qr-error" message={errors.qr} />
                             </div>
                             {qr > 0 && (
-                                <div className="bg-warning-muted text-warning-foreground border-warning/40 flex items-start gap-2 rounded-md border p-3 text-sm">
+                                <div className="bg-warning-muted text-warning-muted-foreground border-warning/40 flex items-start gap-2 rounded-md border p-3 text-sm">
                                     <Checkbox
                                         id="pos-qr-confirmed"
                                         checked={qrConfirmed}

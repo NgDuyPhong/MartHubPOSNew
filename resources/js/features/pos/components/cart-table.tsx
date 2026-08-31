@@ -138,7 +138,7 @@ export function CartTable({
                                                 </div>
                                             )}
                                             {reconciliation[line.key]?.status === 'price_changed' && (
-                                                <div className="text-warning mt-1 flex items-center gap-1 text-xs" role="status">
+                                                <div className="text-warning-text mt-1 flex items-center gap-1 text-xs" role="status">
                                                     <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
                                                     Giá catalog đã đổi; giá trong giỏ vẫn được giữ nguyên.
                                                 </div>

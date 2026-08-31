@@ -40,14 +40,18 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-info-muted: var(--info-muted);
+    --color-info-muted-foreground: var(--info-muted-foreground);
 
     --color-success: var(--success);
     --color-success-foreground: var(--success-foreground);
     --color-success-muted: var(--success-muted);
+    --color-success-muted-foreground: var(--success-muted-foreground);
 
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
     --color-warning-muted: var(--warning-muted);
+    --color-warning-muted-foreground: var(--warning-muted-foreground);
+    --color-warning-text: var(--warning-text);
 
     --color-border: var(--border);
     --color-input: var(--input);
@@ -107,12 +111,16 @@
     --info: hsl(217, 91%, 50%);
     --info-foreground: hsl(0, 0%, 100%);
     --info-muted: hsl(214, 100%, 96%);
+    --info-muted-foreground: hsl(217, 91%, 30%);
     --success: hsl(142, 70%, 35%);
     --success-foreground: hsl(0, 0%, 100%);
     --success-muted: hsl(142, 76%, 95%);
+    --success-muted-foreground: hsl(142, 70%, 24%);
     --warning: hsl(38, 92%, 42%);
     --warning-foreground: hsl(26, 90%, 15%);
     --warning-muted: hsl(48, 100%, 96%);
+    --warning-muted-foreground: hsl(26, 90%, 15%);
+    --warning-text: hsl(26, 90%, 28%);
     --border: hsl(214, 16%, 88%);
     --input: hsl(214, 16%, 84%);
     --ring: hsl(0, 0%, 3.9%);
@@ -152,12 +160,16 @@
     --info: hsl(217, 91%, 65%);
     --info-foreground: hsl(222, 47%, 11%);
     --info-muted: hsl(217, 45%, 18%);
+    --info-muted-foreground: hsl(214, 100%, 88%);
     --success: hsl(142, 70%, 45%);
     --success-foreground: hsl(144, 61%, 8%);
     --success-muted: hsl(143, 45%, 16%);
+    --success-muted-foreground: hsl(142, 76%, 82%);
     --warning: hsl(43, 96%, 56%);
     --warning-foreground: hsl(26, 90%, 10%);
     --warning-muted: hsl(38, 40%, 17%);
+    --warning-muted-foreground: hsl(43, 96%, 78%);
+    --warning-text: hsl(43, 96%, 72%);
     --border: hsl(0, 0%, 14.9%);
     --input: hsl(0, 0%, 14.9%);
     --ring: hsl(0, 0%, 83.1%);
@@ -169,7 +181,7 @@
     --sidebar-background: hsl(0, 0%, 7%);
     --sidebar-foreground: hsl(0, 0%, 80%);
     --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0, 0%, 100%);
+    --sidebar-primary-foreground: hsl(0, 0%, 9%);
     --sidebar-accent: hsl(0, 0%, 15.9%);
     --sidebar-accent-foreground: hsl(240, 4.8%, 95.9%);
     --sidebar-border: hsl(0, 0%, 15.9%);

@@ -54,7 +54,7 @@ export function PosStatusBar({
                 )}
                 <span className="max-w-full">F3 tìm · F8 xóa giỏ · F9 tiền đủ · F12 thanh toán</span>
                 {expiryAlerts > 0 && (
-                    <Badge className="bg-warning-muted text-warning-foreground">
+                    <Badge className="bg-warning-muted text-warning-muted-foreground">
                         <AlertTriangle className="size-3" />
                         {expiryAlerts} lô cận/hết hạn
                     </Badge>

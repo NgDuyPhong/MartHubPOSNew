@@ -56,7 +56,7 @@ export function SyncCenter({
                                     </p>
                                     {record.last_error_message && <p className="text-destructive mt-1 text-xs">{record.last_error_message}</p>}
                                     {record.last_error_code === PRICE_REPRICE_REQUIRED_CODE && (
-                                        <p className="text-warning-foreground mt-1 text-xs">
+                                        <p className="text-warning-text mt-1 text-xs">
                                             Giá master đã thay đổi. Cần cập nhật giá hiện tại online trước khi đồng bộ.
                                         </p>
                                     )}

@@ -39,9 +39,9 @@ export default function InventoryPage({
                     }
                 />
                 {expiringLots.total > 0 && (
-                    <div className="border-warning/40 bg-warning-muted text-warning-foreground rounded-lg border p-4">
+                    <div className="border-warning/40 bg-warning-muted text-warning-muted-foreground rounded-lg border p-4">
                         <h2 className="mb-2 flex items-center font-semibold">
-                            <AlertTriangle className="text-warning mr-2 size-5" />
+                            <AlertTriangle className="text-warning-text mr-2 size-5" />
                             Lô hết hạn hoặc sẽ hết hạn trong 7 ngày
                         </h2>
                         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">

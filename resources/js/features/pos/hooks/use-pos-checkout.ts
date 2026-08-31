@@ -2,6 +2,8 @@ import { firstValidationMessage } from '@/lib/http/errors';
 import { useEffect, useMemo, useState } from 'react';
 import { queueSale } from '../api/offline-sale-repository';
 import { createSale, type SalePayload } from '../api/pos-api';
+import type { PosNotice } from '../model/notices';
+import { createPosNotice } from '../model/notices';
 import { calculateCartTotals, hasStalePriceOverride, reconcileCartWithCatalog, requiresOwnerOverride } from '../model/selectors';
 import type { CartLine, CheckoutDraftSnapshot, Customer, Product, SaleReceipt, Shift } from '../model/types';
 import type { CheckoutErrors } from '../model/validation';
@@ -48,7 +50,7 @@ type CheckoutOptions = {
     unavailableCartLineCount: number;
     clearCart: () => void;
     refreshPending: () => Promise<void>;
-    onMessage: (message: string | null) => void;
+    onMessage: (message: PosNotice | null) => void;
     onSuccess: (receipt: SaleReceipt) => void;
     ensureFresh?: (customerId: number | null) => Promise<{ activeShift: Shift | null; catalog: Product[] } | undefined>;
     refreshAfterSale?: () => Promise<void>;
@@ -90,7 +92,7 @@ export function usePosCheckout(options: CheckoutOptions) {
         let firstError = Object.values(validationErrors)[0];
 
         if (firstError || (!options.online && !options.activeShift)) {
-            options.onMessage(firstError ?? 'Cần mở ca trước khi thanh toán.');
+            options.onMessage(createPosNotice(firstError ?? 'Cần mở ca trước khi thanh toán.', 'error'));
             return;
         }
 
@@ -148,16 +150,18 @@ export function usePosCheckout(options: CheckoutOptions) {
                 setErrors(authoritativeValidationErrors);
                 firstError = Object.values(authoritativeValidationErrors)[0];
                 if (firstError) {
-                    options.onMessage(firstError);
+                    options.onMessage(createPosNotice(firstError, 'error'));
                     return;
                 }
             }
             if (freshOverrideNeeded && !ownerPin) {
-                options.onMessage('Giá hiện tại đã thay đổi hoặc dòng hàng có sửa giá. Hãy nhập PIN chủ cửa hàng rồi thử lại.');
+                options.onMessage(
+                    createPosNotice('Giá hiện tại đã thay đổi hoặc dòng hàng có sửa giá. Hãy nhập PIN chủ cửa hàng rồi thử lại.', 'error'),
+                );
                 return;
             }
             if (!activeShift) {
-                options.onMessage('Cần mở ca trước khi thanh toán.');
+                options.onMessage(createPosNotice('Cần mở ca trước khi thanh toán.', 'error'));
                 return;
             }
             if (!payload || payload.shift_id !== activeShift.id) payload = makePayload(activeShift);
@@ -174,7 +178,7 @@ export function usePosCheckout(options: CheckoutOptions) {
             ) {
                 const offlineShift = activeShift ?? options.activeShift;
                 if (!offlineShift) {
-                    options.onMessage('Cần mở ca trước khi thanh toán.');
+                    options.onMessage(createPosNotice('Cần mở ca trước khi thanh toán.', 'error'));
                     return;
                 }
                 const offlinePayload = { ...payload, source: 'offline_sync' as const };
@@ -184,12 +188,14 @@ export function usePosCheckout(options: CheckoutOptions) {
                     await options.refreshPending();
                     options.onSuccess(buildOfflineReceipt(offlinePayload, options.cart, totals, offlineShift));
                     reset();
-                    options.onMessage('Đã lưu hóa đơn offline; hệ thống sẽ tự đồng bộ khi có mạng.');
+                    options.onMessage(createPosNotice('Đã lưu hóa đơn offline; hệ thống sẽ tự đồng bộ khi có mạng.', 'success'));
                 } catch {
-                    options.onMessage('Không thể lưu hóa đơn vào bộ nhớ offline. Hãy giữ nguyên màn hình và thử lại.');
+                    options.onMessage(createPosNotice('Không thể lưu hóa đơn vào bộ nhớ offline. Hãy giữ nguyên màn hình và thử lại.', 'error'));
                 }
             } else {
-                options.onMessage(firstValidationMessage(error) ?? (error instanceof Error ? error.message : 'Không thể lưu hóa đơn.'));
+                options.onMessage(
+                    createPosNotice(firstValidationMessage(error) ?? (error instanceof Error ? error.message : 'Không thể lưu hóa đơn.'), 'error'),
+                );
             }
         } finally {
             setProcessing(false);

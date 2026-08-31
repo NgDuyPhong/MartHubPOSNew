@@ -75,7 +75,7 @@ export function DebtPaymentDialog({
                         </NativeSelect>
                     </div>
                     {form.data.method === 'qr' && (
-                        <div className="border-warning/40 bg-warning-muted text-warning-foreground flex items-start gap-2 rounded-md border p-3 text-sm">
+                        <div className="border-warning/40 bg-warning-muted text-warning-muted-foreground flex items-start gap-2 rounded-md border p-3 text-sm">
                             <Checkbox
                                 id="payment-qr-confirmed"
                                 checked={form.data.manually_confirmed}

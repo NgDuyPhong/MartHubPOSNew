@@ -19,7 +19,12 @@ export default function Dashboard({
     const cards = [
         { label: 'Doanh thu hôm nay', value: `${formatMoney(summary.revenue)}đ`, icon: Banknote, tone: 'bg-info text-info-foreground' },
         { label: 'Hóa đơn', value: formatMoney(summary.orders), icon: FileText, tone: 'bg-success text-success-foreground' },
-        { label: 'Tiền mặt / QR', value: `${formatMoney(summary.cash)} / ${formatMoney(summary.qr)}`, icon: QrCode, tone: 'bg-primary' },
+        {
+            label: 'Tiền mặt / QR',
+            value: `${formatMoney(summary.cash)} / ${formatMoney(summary.qr)}`,
+            icon: QrCode,
+            tone: 'bg-primary text-primary-foreground',
+        },
         { label: 'Tổng công nợ', value: `${formatMoney(summary.debt)}đ`, icon: Users, tone: 'bg-warning text-warning-foreground' },
     ];
     return (
@@ -41,7 +46,7 @@ export default function Dashboard({
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {cards.map((card) => (
                         <div key={card.label} className="bg-card rounded-lg border p-4 shadow-sm">
-                            <div className={`text-primary-foreground mb-3 flex size-9 items-center justify-center rounded-md ${card.tone}`}>
+                            <div className={`mb-3 flex size-9 items-center justify-center rounded-md ${card.tone}`}>
                                 <card.icon className="size-5" />
                             </div>
                             <div className="text-muted-foreground text-sm">{card.label}</div>
@@ -111,7 +116,7 @@ export default function Dashboard({
                             className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 shadow-sm"
                         >
                             <div className="flex items-center gap-3">
-                                <AlertTriangle className="text-warning size-6" />
+                                <AlertTriangle className="text-warning-text size-6" />
                                 <div>
                                     <div className="font-semibold">Cận/hết hạn 7 ngày</div>
                                     <div className="text-muted-foreground text-xs">Cảnh báo, không chặn bán</div>

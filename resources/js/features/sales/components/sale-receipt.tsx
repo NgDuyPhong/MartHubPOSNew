@@ -49,7 +49,7 @@ export function SaleReceipt({
                                 </td>
                                 <td className="px-4 text-right">{Number(item.quantity)}</td>
                                 <td className="px-4 text-right">{formatMoney(item.unit_price)}đ</td>
-                                <td className="text-warning px-4 text-right">{formatMoney(item.discount_amount)}đ</td>
+                                <td className="text-warning-text px-4 text-right">{formatMoney(item.discount_amount)}đ</td>
                                 <td className="px-4 text-right font-bold">{formatMoney(item.line_total)}đ</td>
                             </tr>
                         ))}

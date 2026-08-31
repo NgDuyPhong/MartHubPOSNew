@@ -77,7 +77,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
                 )}
                 <span className="line-clamp-2 min-h-10 text-sm font-semibold">{product.name}</span>
                 <span
-                    className={`text-xs ${defaultSelection && stock <= 0 ? 'text-destructive' : defaultSelection && stock <= 5 ? 'text-warning' : 'text-muted-foreground'}`}
+                    className={`text-xs ${defaultSelection && stock <= 0 ? 'text-destructive' : defaultSelection && stock <= 5 ? 'text-warning-text' : 'text-muted-foreground'}`}
                 >
                     {product.sku} · {stockLabel}
                 </span>

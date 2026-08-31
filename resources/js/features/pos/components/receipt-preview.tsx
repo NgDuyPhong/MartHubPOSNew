@@ -35,7 +35,7 @@ export function ReceiptPreview({
                             <div className="border-y border-dashed py-2">
                                 <div className="flex items-center justify-between gap-2">
                                     <span>Số HĐ: {receipt.invoice_number}</span>
-                                    {isPendingReceipt(receipt) && <strong className="text-warning">CHỜ ĐỒNG BỘ</strong>}
+                                    {isPendingReceipt(receipt) && <strong className="text-warning-text">CHỜ ĐỒNG BỘ</strong>}
                                 </div>
                                 {receipt.branch_name && <div>Chi nhánh: {receipt.branch_name}</div>}
                                 {receipt.shift_code && <div>Ca: {receipt.shift_code}</div>}
@@ -128,7 +128,7 @@ export function SaleSuccessBar({ receipt, onPreview, durationMs = 5000 }: { rece
 
     return (
         <div
-            className="bg-success-muted text-success-foreground border-success/30 fixed right-4 bottom-4 z-50 flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg"
+            className="bg-success-muted text-success-muted-foreground border-success/30 fixed right-4 bottom-4 z-50 flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg"
             role="status"
             aria-live="polite"
         >
