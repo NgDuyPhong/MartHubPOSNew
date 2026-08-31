@@ -2,10 +2,10 @@ import { FieldError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
-import { AlertTriangle, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { CartReconciliation } from '../model/selectors';
-import type { CartLine } from '../model/types';
+import type { CartLine, Product } from '../model/types';
 import { PosMoneyInput } from './pos-money-input';
 
 export function CartTable({
@@ -16,6 +16,7 @@ export function CartTable({
     onSelect,
     onClear,
     onUpdate,
+    onChangeSelection,
     onRemove,
 }: {
     cart: CartLine[];
@@ -25,6 +26,7 @@ export function CartTable({
     onSelect: (key: string) => void;
     onClear: () => void;
     onUpdate: (key: string, values: Partial<CartLine>) => void;
+    onChangeSelection: (line: CartLine, product: Product) => void;
     onRemove: (key: string) => void;
 }) {
     return (
@@ -61,79 +63,117 @@ export function CartTable({
                         </tr>
                     </thead>
                     <tbody>
-                        {cart.map((line) => (
-                            <tr
-                                key={line.key}
-                                onClick={() => onSelect(line.key)}
-                                tabIndex={0}
-                                aria-selected={selectedKey === line.key}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                        event.preventDefault();
-                                        onSelect(line.key);
-                                    }
-                                }}
-                                className={`focus-visible:ring-ring border-t focus-visible:ring-2 ${selectedKey === line.key ? 'bg-accent' : ''} ${
-                                    reconciliation[line.key]?.status === 'unavailable' ? 'bg-destructive/5' : ''
-                                }`}
-                            >
-                                <td className="px-3 py-2">
-                                    <div className="font-medium">{line.product.name}</div>
-                                    <div className="text-muted-foreground text-xs">
-                                        {line.productUnit.unit.name} · 1 {line.productUnit.unit.code} = {Number(line.productUnit.conversion_to_base)}{' '}
-                                        đơn vị gốc
-                                    </div>
-                                    {reconciliation[line.key]?.status === 'unavailable' && (
-                                        <div className="text-destructive mt-1 flex items-center gap-1 text-xs" role="status">
-                                            <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-                                            Không còn bán. Xóa dòng và chọn sản phẩm khác.
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-destructive h-auto px-1 py-0 text-xs"
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    onRemove(line.key);
-                                                }}
-                                            >
-                                                Xóa dòng
-                                            </Button>
-                                        </div>
-                                    )}
-                                    {reconciliation[line.key]?.status === 'price_changed' && (
-                                        <div className="text-warning mt-1 flex items-center gap-1 text-xs" role="status">
-                                            <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-                                            Giá catalog đã đổi; giá trong giỏ vẫn được giữ nguyên.
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="px-2 py-2">
-                                    <QuantityInput line={line} onUpdate={onUpdate} onRemove={onRemove} />
-                                </td>
-                                <td className="px-2">
-                                    <PosMoneyInput
-                                        className="h-8 px-2 text-right"
-                                        value={line.unitPrice}
-                                        aria-label={`Đơn giá ${line.product.name}`}
-                                        disabled={!online}
-                                        min={0}
-                                        onValueChange={(value) => onUpdate(line.key, { unitPrice: value })}
-                                    />
-                                </td>
-                                <td className="px-2">
-                                    <PosMoneyInput
-                                        className="h-8 px-2 text-right"
-                                        value={line.discount}
-                                        aria-label={`Giảm giá ${line.product.name}`}
-                                        disabled={!online}
-                                        min={0}
-                                        onValueChange={(value) => onUpdate(line.key, { discount: value })}
-                                    />
-                                </td>
-                                <td className="px-3 text-right font-semibold">{formatMoney(line.unitPrice * line.quantity - line.discount)}đ</td>
-                            </tr>
-                        ))}
+                        {cart.map((line) =>
+                            (() => {
+                                const lineReconciliation = reconciliation[line.key];
+                                const currentProduct = lineReconciliation?.product;
+                                const currentProductUnit = lineReconciliation?.productUnit ?? line.productUnit;
+                                const selectableUnitCount = currentProduct?.variants.reduce((count, variant) => count + variant.units.length, 0) ?? 0;
+                                const canChangeSelection = Boolean(
+                                    currentProduct && lineReconciliation?.status !== 'unavailable' && selectableUnitCount > 1,
+                                );
+                                const productName = currentProduct?.name ?? line.product.name;
+
+                                return (
+                                    <tr
+                                        key={line.key}
+                                        onClick={() => onSelect(line.key)}
+                                        tabIndex={0}
+                                        aria-selected={selectedKey === line.key}
+                                        onKeyDown={(event) => {
+                                            if (event.target !== event.currentTarget) {
+                                                return;
+                                            }
+
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                onSelect(line.key);
+                                            }
+                                        }}
+                                        className={`focus-visible:ring-ring border-t focus-visible:ring-2 ${selectedKey === line.key ? 'bg-accent' : ''} ${
+                                            reconciliation[line.key]?.status === 'unavailable' ? 'bg-destructive/5' : ''
+                                        }`}
+                                    >
+                                        <td className="px-3 py-2">
+                                            <div className="font-medium">{productName}</div>
+                                            {canChangeSelection && currentProduct ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-muted-foreground hover:text-foreground h-auto min-h-5 justify-start gap-1 px-0 py-0 text-left text-xs font-normal hover:bg-transparent"
+                                                    aria-label={`Đổi quy cách bán cho ${productName}, hiện tại ${currentProductUnit.unit.name}`}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        onSelect(line.key);
+                                                        onChangeSelection(line, currentProduct);
+                                                    }}
+                                                >
+                                                    {currentProductUnit.unit.name} · 1 {currentProductUnit.unit.code} ={' '}
+                                                    {Number(currentProductUnit.conversion_to_base)} đơn vị gốc
+                                                    <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
+                                                </Button>
+                                            ) : (
+                                                <div className="text-muted-foreground text-xs">
+                                                    {currentProductUnit.unit.name} · 1 {currentProductUnit.unit.code} ={' '}
+                                                    {Number(currentProductUnit.conversion_to_base)} đơn vị gốc
+                                                </div>
+                                            )}
+                                            {reconciliation[line.key]?.status === 'unavailable' && (
+                                                <div className="text-destructive mt-1 flex items-center gap-1 text-xs" role="status">
+                                                    <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                                                    Không còn bán. Xóa dòng và chọn sản phẩm khác.
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive h-auto px-1 py-0 text-xs"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            onRemove(line.key);
+                                                        }}
+                                                    >
+                                                        Xóa dòng
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            {reconciliation[line.key]?.status === 'price_changed' && (
+                                                <div className="text-warning mt-1 flex items-center gap-1 text-xs" role="status">
+                                                    <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                                                    Giá catalog đã đổi; giá trong giỏ vẫn được giữ nguyên.
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <QuantityInput line={line} onUpdate={onUpdate} onRemove={onRemove} />
+                                        </td>
+                                        <td className="px-2">
+                                            <PosMoneyInput
+                                                className="h-8 px-2 text-right"
+                                                value={line.unitPrice}
+                                                aria-label={`Đơn giá ${line.product.name}`}
+                                                disabled={!online}
+                                                min={0}
+                                                onValueChange={(value) => onUpdate(line.key, { unitPrice: value })}
+                                            />
+                                        </td>
+                                        <td className="px-2">
+                                            <PosMoneyInput
+                                                className="h-8 px-2 text-right"
+                                                value={line.discount}
+                                                aria-label={`Giảm giá ${line.product.name}`}
+                                                disabled={!online}
+                                                min={0}
+                                                onValueChange={(value) => onUpdate(line.key, { discount: value })}
+                                            />
+                                        </td>
+                                        <td className="px-3 text-right font-semibold">
+                                            {formatMoney(line.unitPrice * line.quantity - line.discount)}đ
+                                        </td>
+                                    </tr>
+                                );
+                            })(),
+                        )}
                         {!cart.length && (
                             <tr>
                                 <td colSpan={5} className="text-muted-foreground py-20 text-center">

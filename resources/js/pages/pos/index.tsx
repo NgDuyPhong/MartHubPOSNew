@@ -39,8 +39,8 @@ import {
     ReceiptPreview,
     SaleSuccessBar,
     SyncCenter,
+    VariantUnitPicker,
 } from '@/features/pos/components';
-import { VariantUnitPicker } from '@/features/pos/components/variant-unit-picker';
 import { ProductQuickEditSheet } from '@/features/products';
 import AppLayout from '@/layouts/app-layout';
 import type { SharedData } from '@/types';
@@ -59,6 +59,8 @@ type PosProps = {
     versions: PosVersions;
     snapshotScope: { organizationId: number; branchId: number };
 };
+
+type PickerContext = { mode: 'add'; product: Product } | { mode: 'replace'; product: Product; lineKey: string; selectedUnitId: number } | null;
 
 const posResourceRefreshErrorMessage = 'Không thể làm mới dữ liệu POS. Hãy kiểm tra kết nối rồi thử lại khi quay lại POS.';
 
@@ -93,7 +95,7 @@ export default function PosPage({
     const [openShiftOpen, setOpenShiftOpen] = useState(!activeShift);
     const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
     const [quickEditUnitId, setQuickEditUnitId] = useState<number | undefined>();
-    const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
+    const [pickerContext, setPickerContext] = useState<PickerContext>(null);
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
     const [syncCenterOpen, setSyncCenterOpen] = useState(false);
     const [undoCart, setUndoCart] = useState<CartLine[]>([]);
@@ -119,6 +121,7 @@ export default function PosPage({
         cart,
         selectedKey,
         addLine,
+        changeLineSelection,
         updateLine,
         removeLine,
         clearCart,
@@ -385,6 +388,12 @@ export default function PosPage({
         },
         [checkoutSnapshot, focusSearchAfterCartChange, restoreDraft, switchCart],
     );
+
+    const closePicker = useCallback(() => {
+        setPickerContext(null);
+        window.setTimeout(() => searchRef.current?.focus(), 0);
+    }, []);
+
     const addUnit = useCallback(
         (product: Product, variant: Variant, unit: ProductUnit) => {
             setReceipt(null);
@@ -415,7 +424,7 @@ export default function PosPage({
                 const product = matches[0];
                 const selection = getDefaultSellableSelection(product);
                 if (selection) addUnit(product, selection.variant, selection.unit);
-                else setPickerProduct(product);
+                else setPickerContext({ mode: 'add', product });
             }
         },
         [addUnit, catalogSearchIndex, categoryId, query],
@@ -427,7 +436,7 @@ export default function PosPage({
         total: checkout.total,
         selectedKey,
         clearCart: requestClearCart,
-        dialogOpen: clearDialogOpen || Boolean(pickerProduct) || Boolean(quickEditProduct),
+        dialogOpen: clearDialogOpen || Boolean(pickerContext) || Boolean(quickEditProduct),
         removeLine,
         setCash: checkout.setCash,
         expandCheckout: () => checkout.setExpanded(true),
@@ -471,7 +480,7 @@ export default function PosPage({
                         onCategoryChange={setCategoryId}
                         onSearchKey={handleSearchKey}
                         onAdd={addUnit}
-                        onPick={setPickerProduct}
+                        onPick={(product) => setPickerContext({ mode: 'add', product })}
                         canManageCatalog={canManageCatalog}
                         onQuickEdit={openQuickEdit}
                     />
@@ -493,6 +502,9 @@ export default function PosPage({
                             onSelect={selectLine}
                             onClear={requestClearCart}
                             onUpdate={updateLine}
+                            onChangeSelection={(line, product) =>
+                                setPickerContext({ mode: 'replace', product, lineKey: line.key, selectedUnitId: line.productUnit.id })
+                            }
                             onRemove={removeLine}
                         />
                         <CartSummary
@@ -543,12 +555,29 @@ export default function PosPage({
             {receipt && <SaleSuccessBar receipt={receipt} onPreview={() => setReceiptPreviewOpen(true)} />}
             <ReceiptPreview receipt={receipt ?? storedReceipt} open={receiptPreviewOpen} onOpenChange={setReceiptPreviewOpen} />
             <VariantUnitPicker
-                product={pickerProduct}
-                open={Boolean(pickerProduct)}
-                onOpenChange={(open) => !open && setPickerProduct(null)}
+                product={pickerContext?.product ?? null}
+                open={Boolean(pickerContext)}
+                mode={pickerContext?.mode ?? 'add'}
+                selectedUnitId={pickerContext?.mode === 'replace' ? pickerContext.selectedUnitId : undefined}
+                onOpenChange={(open) => !open && closePicker()}
                 onSelect={(product, variant, unit) => {
+                    if (pickerContext?.mode === 'replace') {
+                        const source = cart.find((line) => line.key === pickerContext.lineKey);
+                        if (source && source.productUnit.id !== unit.id) {
+                            const hadPricingOverride = source.unitPrice !== source.productUnit.sale_price || source.discount > 0;
+                            setReceipt(null);
+                            setReceiptPreviewOpen(false);
+                            changeLineSelection(source.key, product, variant, unit);
+                            if (hadPricingOverride) {
+                                setMessage('Đã đổi quy cách; giá và giảm giá của dòng cũ đã được đặt lại.');
+                            }
+                        }
+                        closePicker();
+                        return;
+                    }
+
                     addUnit(product, variant, unit);
-                    setPickerProduct(null);
+                    closePicker();
                 }}
             />
             <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
